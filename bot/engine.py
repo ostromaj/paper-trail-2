@@ -103,17 +103,30 @@ def _record(state, now, **kw):
     return t
 
 
+def crypto_exposure(state):
+    return sum(p["qty"] * state["prices"].get(p["symbol"], {}).get("price", p["entry_price"])
+               for p in state["positions"] if p["kind"] == "crypto")
+
+
+def plan_size(state, kind, entry, stop):
+    """Dollar amount for a trade: risk-based, capped by cash and (for crypto) the crypto budget."""
+    eq = equity(state)
+    dist = (entry - stop) / entry if entry else 0
+    if dist <= 0:
+        return 0.0
+    dollars = min(eq * C.RISK_PER_TRADE / dist, eq * C.MAX_POSITION_PCT, state["cash"])
+    if kind == "crypto":
+        dollars = min(dollars, max(eq * C.CRYPTO_MAX_PCT - crypto_exposure(state), 0))
+    return int(dollars * 100) / 100
+
+
 def open_position(state, c, now):
     price = c["price"]
     stop = c["stop"]
-    eq = equity(state)
-    dist = (price - stop) / price
-    if dist <= 0:
-        return None
-    dollars = min(eq * C.RISK_PER_TRADE / dist, eq * C.MAX_POSITION_PCT, state["cash"])
-    dollars = int(dollars * 100) / 100
+    dollars = plan_size(state, c["kind"], price, stop)
     if dollars < C.MIN_TRADE_DOLLARS:
-        _log(state, now, f"{c['symbol']} {c['strategy_name']} was ready, but there's no free cash. Skipped.")
+        why = "the crypto budget (25% of the account) is used up" if c["kind"] == "crypto" else "there's no free cash"
+        _log(state, now, f"{c['symbol']} {c['strategy_name']} was ready, but {why}. Skipped.")
         return None
     if c["kind"] == "crypto":
         fee = dollars * C.CRYPTO_FEE
@@ -142,7 +155,7 @@ def open_position(state, c, now):
         state, now, action="BUY", symbol=c["symbol"], name=c["name"], kind=c["kind"],
         strategy=c["strategy"], strategy_name=c["strategy_name"], position_id=pos["id"],
         price=_round_price(price), fill_price=fill, qty=qty, amount=dollars, fee=round(fee, 4),
-        stop=stop, target=target,
+        stop=stop, target=target, out_text=c.get("out_text", ""),
         reason=f"All {c['total']} conditions met: {met}.",
         checks=c["checks"], indicators=c["indicators"],
         steps=buy_steps(c, dollars, stop, target, c["exit_plan"]),
@@ -392,6 +405,8 @@ def cycle(state, market):
             break
         if c["symbol"] in held or len(state["positions"]) >= C.MAX_OPEN_POSITIONS:
             continue
+        if c["kind"] == "crypto" and sum(p["kind"] == "crypto" for p in state["positions"]) >= C.MAX_CRYPTO_POSITIONS:
+            continue
         if state["cooldowns"].get(c["symbol"], 0) > now:
             continue
         if open_position(state, c, now):
@@ -411,12 +426,25 @@ def cycle(state, market):
             status = "close"
         else:
             status = "watching"
+        entry, stop, target = c["entry"], c["stop"], c.get("target")
+        amount = plan_size(state, c["kind"], entry, stop) if status not in ("holding",) else 0
+        plan = {
+            "entry": _round_price(entry), "entry_text": c["entry_text"],
+            "stop": _round_price(stop), "stop_pct": round((stop / entry - 1) * 100, 2),
+            "target": _round_price(target) if target else None,
+            "target_pct": round((target / entry - 1) * 100, 2) if target else None,
+            "out_text": c["out_text"], "amount": amount,
+            "risk_dollars": round(amount * (entry - stop) / entry, 2) if entry else 0,
+        }
+        if c["kind"] == "crypto" and amount < C.MIN_TRADE_DOLLARS:
+            plan["note"] = "Crypto budget is full (25% of the account), so this one would be skipped right now."
         watch.append({k: c[k] for k in ("symbol", "name", "kind", "strategy", "strategy_name", "checks",
                                          "met", "total", "trigger", "indicators")}
                      | {"status": status, "price": _round_price(c["price"]),
-                        "progress": round(c["met"] / c["total"], 2)})
+                        "progress": round(c["met"] / c["total"], 2), "plan": plan})
     order = {"ready": 0, "close": 1, "watching": 2, "holding": 3, "off-hours": 4}
-    watch.sort(key=lambda w: (order[w["status"]], -w["progress"], PRIORITY[w["strategy"]]))
+    # stocks first at equal status, so crypto doesn't crowd the list
+    watch.sort(key=lambda w: (order[w["status"]], w["kind"] == "crypto", -w["progress"], PRIORITY[w["strategy"]]))
     state["watchlist"] = watch
 
     # 7. bookkeeping

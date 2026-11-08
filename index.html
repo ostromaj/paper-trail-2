@@ -168,6 +168,17 @@ section { margin-top: 16px; }
 .checks li.no { color: var(--ink-2); }
 .checks .det { color: var(--ink-3); font-family: var(--mono); font-size: 12px; }
 .trigger { margin-top: 8px; font-size: 13px; color: var(--ink-2); font-style: italic; }
+.plan-box { margin-top: 10px; border: 1px dashed var(--rule-strong); border-radius: 10px; padding: 10px; background: var(--paper); }
+.plan-box .ttl { font: 600 11px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+.plan-box .ttl button { margin-left: auto; font: 500 12px var(--sans); letter-spacing: 0; text-transform: none; border: 1px solid var(--rule-strong); background: var(--card); border-radius: 7px; padding: 3px 8px; cursor: pointer; color: var(--ink-2); }
+.io { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.io > div { background: var(--card); border: 1px solid var(--rule); border-radius: 8px; padding: 6px 8px; min-width: 0; }
+.io span { display: block; font: 600 10.5px var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+.io b { display: block; font: 600 14.5px var(--mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.io em { display: block; font: 500 11.5px var(--mono); font-style: normal; color: var(--ink-3); }
+.io .in span { color: var(--accent); } .io .stop span { color: var(--loss); } .io .tgt span { color: var(--gain); }
+.plan-box .how { font-size: 12.5px; color: var(--ink-2); margin-top: 6px; }
+.plan-box .note { font-size: 12.5px; color: var(--warn); margin-top: 4px; }
 .more { margin-top: 10px; }
 
 /* positions */
@@ -324,7 +335,7 @@ footer { margin-top: 26px; color: var(--ink-3); font-size: 12.5px; text-align: c
       <section>
         <div class="card">
           <h2>Heads up: about to trade <small id="watchCount"></small></h2>
-          <p class="sub">Every rule has a checklist. When every box is checked, the bot buys. Green = buying now, yellow = one condition away.</p>
+          <p class="sub">Every rule has a checklist. When every box is checked, the bot buys. Green = buying now, yellow = one condition away. Each card has the In and Out prices, so you can set alerts or orders ahead of time.</p>
           <div class="watch" id="watch"></div>
           <button class="btn more" id="watchMore" hidden>Show all setups</button>
         </div>
@@ -402,7 +413,7 @@ footer { margin-top: 26px; color: var(--ink-3); font-size: 12.5px; text-align: c
         </div>
         <div class="rule">
           <h3>Money rules</h3>
-          <p>Each trade risks about 1.5% of the account if its stop hits. One trade can use up to the whole $100. At most 3 trades open at once. Down 5% on the day means no new trades until tomorrow.</p>
+          <p>Each trade risks about 1.5% of the account if its stop hits. A stock trade can use up to the whole account. Crypto is capped at 25% of the account, one coin at a time, so it never crowds out the stock trades. At most 3 trades open at once. Down 5% on the day means no new trades until tomorrow.</p>
           <div class="src">Paper trades still pay realistic costs: 0.02% slippage on stocks, 0.40% per side on crypto.</div>
         </div>
       </div>
@@ -595,7 +606,11 @@ footer { margin-top: 26px; color: var(--ink-3); font-size: 12.5px; text-align: c
         `Decided ${last.decided_at_text} at ${money(last.price)}`,
         last.action === "SELL" && last.pnl != null ? el("span", { class: cls(last.pnl) }, ` · result ${money(last.pnl, true)} (${pct(last.pnl_pct)})`) : null),
       el("div", { class: "when", style: "margin-top:4px", text: "Why: " + last.reason }),
+      last.action === "BUY" ? el("div", { style: "margin-top:12px" },
+        ioBox(last.price, `Amount ${money(last.amount)} · decided ${etTime(last.decided_at)} ET`, last.stop, last.target,
+          last.kind === "crypto" ? (last.strategy === "CBRK" ? "trailing" : "12 hr max") : (last.strategy === "LATE" ? "3:55 PM" : "3:50 PM"))) : null,
       stepsList(last.steps || []),
+      last.action === "BUY" && last.out_text ? el("div", { class: "when", style: "margin-top:6px", text: "Exit plan: " + last.out_text }) : null,
       last.action === "BUY" && fresh ? el("div", { class: "skip", text: last.skip_if }) : null,
       !fresh ? el("div", { class: "when", style: "margin-top:10px", text: "This is older than 20 minutes. If you didn't act on it, don't chase it now. Check Holding right now for what's still open." }) : null,
       el("div", { class: "row-btns" },
@@ -604,7 +619,8 @@ footer { margin-top: 26px; color: var(--ink-3); font-size: 12.5px; text-align: c
   }
   function copySteps(t) {
     const txt = `${headline(t)} (decided ${t.decided_at_text} at ${money(t.price)})\n` +
-      (t.steps || []).map((s, i) => `${i + 1}. ${s}`).join("\n") + (t.skip_if ? `\n${t.skip_if}` : "");
+      (t.action === "BUY" ? `IN ${money(t.price)} · OUT stop ${money(t.stop)}` + (t.target ? ` · OUT target ${money(t.target)}` : "") + "\n" : "") +
+      (t.steps || []).map((s, i) => `${i + 1}. ${s}`).join("\n") + (t.out_text ? `\nExit plan: ${t.out_text}` : "") + (t.skip_if ? `\n${t.skip_if}` : "");
     navigator.clipboard?.writeText(txt).then(() => toast("Instructions copied"), () => toast("Couldn't copy on this device"));
   }
 
@@ -634,6 +650,28 @@ footer { margin-top: 26px; color: var(--ink-3); font-size: 12.5px; text-align: c
   }
 
   // ---------------------------------------------------------------- render: heads up
+  // short price for the In/Out boxes: no cents on big prices like Bitcoin
+  const px = (x) => x == null ? "--" : x >= 1000 ? "$" + Math.round(x).toLocaleString("en-US") : money(x);
+  function ioBox(entry, entryNote, stop, target, timeExit) {
+    const pctOf = (x) => entry ? `${(x / entry - 1) * 100 >= 0 ? "+" : ""}${((x / entry - 1) * 100).toFixed(1)}%` : "";
+    return el("div", null,
+      el("div", { class: "io" },
+        el("div", { class: "in" }, el("span", { text: "In" }), el("b", { text: px(entry) }), el("em", { text: "buy" })),
+        el("div", { class: "stop" }, el("span", { text: "Stop" }), el("b", { text: px(stop) }), el("em", { text: pctOf(stop) })),
+        el("div", { class: "tgt" }, el("span", { text: target ? "Target" : "Exit" }),
+          el("b", { text: target ? px(target) : timeExit }), el("em", { text: target ? pctOf(target) : "no fixed target" }))),
+      entryNote ? el("div", { class: "how", style: "font-family:var(--mono);font-size:12px", text: entryNote }) : null);
+  }
+  function planText(w) {
+    const p = w.plan;
+    return `${ticker(w.symbol)} plan (${w.strategy_name})\n` +
+      `IN: ${p.entry_text}. Amount: ${money(p.amount)}.\n` +
+      `OUT (stop): ${money(p.stop)} (${p.stop_pct}%)\n` +
+      (p.target ? `OUT (target): ${money(p.target)} (+${p.target_pct}%)\n` : "") +
+      p.out_text;
+  }
+  const timeExitOf = (w) => w.kind === "crypto" ? (w.strategy === "CBRK" ? "trailing" : "12 hr max") : (w.strategy === "LATE" ? "3:55 PM" : "3:50 PM");
+
   const STATUS_TEXT = { ready: "Buying now", close: "1 condition away", watching: "Watching", holding: "Holding", "off-hours": "Not in its time window" };
   function renderWatch() {
     const list = S.watchlist || [];
@@ -657,7 +695,13 @@ footer { margin-top: 26px; color: var(--ink-3); font-size: 12.5px; text-align: c
           el("ul", { class: "checks" }, w.checks.map((c) => el("li", { class: c.ok ? "ok" : "no" },
             el("span", { class: "mark", text: c.ok ? "✓" : "✗" }),
             el("span", null, c.label, " ", el("span", { class: "det", text: c.detail ? `(${c.detail})` : "" }))))),
-          el("div", { class: "trigger", text: w.trigger }));
+          el("div", { class: "trigger", text: w.trigger }),
+          w.plan && w.status !== "holding" ? el("div", { class: "plan-box" },
+            el("div", { class: "ttl" }, "Order plan if it triggers",
+              el("button", { onclick: () => navigator.clipboard?.writeText(planText(w)).then(() => toast("Plan copied"), () => toast("Couldn't copy on this device")) }, "Copy")),
+            ioBox(w.plan.entry, w.plan.amount >= 1 ? `Amount ${money(w.plan.amount)} · loses ${money(w.plan.risk_dollars)} if the stop hits` : "No cash free for this one right now", w.plan.stop, w.plan.target, timeExitOf(w)),
+            el("div", { class: "how", text: w.plan.entry_text + ". " + w.plan.out_text }),
+            w.plan.note ? el("div", { class: "note", text: w.plan.note }) : null) : null);
       }));
     }
     const mb = $("watchMore");

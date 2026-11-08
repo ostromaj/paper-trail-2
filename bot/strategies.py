@@ -37,6 +37,7 @@ def _candidate(symbol, name, kind, key, checks, ready, price, **extra):
         "checks": checks, "met": sum(ch["ok"] for ch in checks), "total": len(checks),
         "ready": bool(ready), "price": price,
         "stop": None, "target": None, "trigger": "", "exit_plan": "", "indicators": {},
+        "entry": price, "entry_text": "", "out_text": "",
     }
     c.update(extra)
     return c
@@ -97,10 +98,16 @@ def evaluate_stock(symbol, data, daily, now, traded_today):
         ]
         window = in_window(now, C.ORB_WINDOW) and ("ORB", symbol) not in traded_today
         ready = window and all(c["ok"] for c in checks)
-        stop = max(or_lo, price - 0.2 * a)
-        stop = min(stop, price * (1 - 0.0025))
+        broke = price > or_hi
+        entry = price if broke else or_hi + max(0.01, or_hi * 0.0002)
+        stop = min(max(or_lo, entry - 0.2 * a), entry * (1 - 0.0025))
+        risk = entry - stop
         out.append(_candidate(
-            symbol, name, kind, "ORB", checks, ready, price, stop=stop, in_window=window,
+            symbol, name, kind, "ORB", checks, ready, price, stop=stop, in_window=window, entry=entry,
+            entry_text=(f"Buy at market (about {_money(price)})" if broke
+                        else f"Buy when {symbol} trades above {_money(or_hi)}"),
+            out_text=(f"Sell by 3:50 PM ET. If it reaches {_money(entry + risk)}, "
+                      f"raise the stop to {_money(entry)} (break-even)."),
             trigger=f"Buys if {symbol} trades above {_money(or_hi)} before 11:00 AM",
             exit_plan="Hold until 3:50 PM ET unless the stop hits. The stop moves up as the trade profits.",
             indicators={**base_ind, "Opening high": round(or_hi, 2), "Opening low": round(or_lo, 2),
@@ -120,9 +127,17 @@ def evaluate_stock(symbol, data, daily, now, traded_today):
         end = shift_for_early_close(now, C.VWAP_WINDOW[1])
         window = C.VWAP_WINDOW[0] <= hm(now) < end and ("VWAP", symbol) not in traded_today
         ready = window and all(c["ok"] for c in checks)
-        stop = min(v_now - 0.1 * a, price * (1 - 0.0025))
+        line = v_now * 1.0005
+        entry = max(price, line)
+        stop = min(v_now - 0.1 * a, entry * (1 - 0.0025))
+        risk = entry - stop
         out.append(_candidate(
             symbol, name, kind, "VWAP", checks, ready, price, stop=stop, in_window=window, vwap=v_now,
+            entry=entry,
+            entry_text=(f"Buy at market (about {_money(price)})" if price > line
+                        else f"Buy if {symbol} climbs back above {_money(line)}"),
+            out_text=(f"Sell if a 5-min candle closes below VWAP (now {_money(v_now)}), or by 3:50 PM ET. "
+                      f"If it reaches {_money(entry + risk)}, raise the stop to {_money(entry)}."),
             trigger=f"Buys if {symbol} holds above VWAP ({_money(v_now)}) with the trend up",
             exit_plan="Sell when a 5-min candle closes below VWAP, if the stop hits, or at 3:50 PM ET.",
             indicators=base_ind,
@@ -146,6 +161,8 @@ def evaluate_stock(symbol, data, daily, now, traded_today):
         ready = window and all(c["ok"] for c in checks)
         out.append(_candidate(
             symbol, name, kind, "LATE", checks, ready, price, stop=price * (1 - 0.004), in_window=window,
+            entry=price, entry_text=f"Buy at market around 3:30 PM (about {_money(price)} now)",
+            out_text="Sell at 3:55 PM ET, just before the close.",
             trigger="Buys SPY around 3:30 PM if the morning and the 3:00 to 3:30 stretch were both up",
             exit_plan="Sell at 3:55 PM ET (just before the close).",
             indicators={"Prev close": round(prev_close, 2)},
@@ -182,10 +199,16 @@ def evaluate_crypto(symbol, data, now, cooldowns):
         _check("Volume surge (1.5x normal or more)", vmult >= 1.5, f"{vmult:.1f}x normal"),
         _check("Not overheated (RSI under 80)", rs[-1] < 80, f"RSI {rs[-1]:.0f}"),
     ]
-    stop_d = max(2 * a, price * 0.012)
+    broke = last["c"] > hi24
+    entry = price if broke else hi24
+    stop_d = max(2 * a, entry * 0.012)
     out.append(_candidate(
         symbol, name, kind, "CBRK", checks, (not cool) and all(c["ok"] for c in checks), price,
-        stop=price - stop_d, in_window=not cool, atr=a,
+        stop=entry - stop_d, in_window=not cool, atr=a, entry=entry,
+        entry_text=(f"Buy at market (about {_money(price)})" if broke
+                    else f"Buy if a 15-min candle closes above {_money(hi24)}"),
+        out_text=(f"Trailing stop: keep it about {_money(2.5 * a)} below the highest price it reaches. "
+                  f"Sell after {C.CRYPTO_BREAKOUT_MAX_HOURS} hours no matter what."),
         trigger=f"Buys if a 15-min candle closes above {_money(hi24)} on strong volume",
         exit_plan=f"Trailing stop 2.5x ATR below the highest price; sell after {C.CRYPTO_BREAKOUT_MAX_HOURS} hours max.",
         indicators=ind,
@@ -203,7 +226,9 @@ def evaluate_crypto(symbol, data, now, cooldowns):
     tgt_d = max(2.0 * a, price * 0.016)
     out.append(_candidate(
         symbol, name, kind, "CDIP", checks, (not cool) and all(c["ok"] for c in checks), price,
-        stop=price - stop_d, target=price + tgt_d, in_window=not cool, atr=a,
+        stop=price - stop_d, target=price + tgt_d, in_window=not cool, atr=a, entry=price,
+        entry_text=f"Buy around {_money(price)} once RSI bounces back above 30",
+        out_text=f"Sell at the target or the stop, or after {C.CRYPTO_DIP_MAX_HOURS} hours no matter what.",
         trigger=f"Buys if {name} gets oversold (RSI under 30) and bounces while the uptrend holds",
         exit_plan=f"Sell at the target or stop, or after {C.CRYPTO_DIP_MAX_HOURS} hours max.",
         indicators=ind,

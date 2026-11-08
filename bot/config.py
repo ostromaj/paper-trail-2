@@ -32,6 +32,10 @@ LATE_MOMENTUM_SYMBOLS = ["SPY"]          # last-half-hour momentum: SPY only
 RISK_PER_TRADE = 0.015      # lose at most ~1.5% of the account if a stop is hit
 MAX_POSITION_PCT = 1.00     # one trade may use up to 100% of the account
 MAX_OPEN_POSITIONS = 3
+# Keep crypto from taking over: it trades 24/7 and could otherwise tie up the
+# cash the stock rules need at 9:30.
+CRYPTO_MAX_PCT = 0.25       # all crypto together: at most 25% of the account
+MAX_CRYPTO_POSITIONS = 1    # one coin at a time
 MIN_TRADE_DOLLARS = 1.00
 DAILY_LOSS_LIMIT = 0.05     # down 5% on the day -> no new trades until tomorrow
 

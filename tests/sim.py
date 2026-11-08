@@ -106,6 +106,12 @@ def main():
             json.loads(json.dumps(st))  # must stay JSON-safe
             assert st["cash"] >= -1e-6, "cash went negative"
             assert len(st["positions"]) <= C.MAX_OPEN_POSITIONS
+            for tr in st["trades"]:
+                if tr["action"] == "BUY" and tr["kind"] == "crypto":
+                    assert tr["amount"] <= C.STARTING_CASH * 1.2 * C.CRYPTO_MAX_PCT, f"crypto too big: {tr['amount']}"
+            assert sum(p["kind"] == "crypto" for p in st["positions"]) <= C.MAX_CRYPTO_POSITIONS
+            for w in st["watchlist"]:
+                assert w["plan"]["entry"] > w["plan"]["stop"], w
             for p in st["positions"]:
                 if p["kind"] != "crypto":
                     assert stock_market_open(m.t), f"stock held after close: {p['symbol']}"
