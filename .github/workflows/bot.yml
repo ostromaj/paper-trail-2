@@ -4,7 +4,7 @@ name: Trading bot
 # (stocks during market hours, crypto around the clock).
 on:
   schedule:
-    - cron: "2-59/5 * * * *"
+    - cron: "*/5 * * * *"
   workflow_dispatch:
 
 permissions:
