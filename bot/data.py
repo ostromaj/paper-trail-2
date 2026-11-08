@@ -145,12 +145,17 @@ class LiveMarket:
             source = "Nasdaq"
         if not ones and not five:
             return None
-        latest_day = date_str((ones or five)[-1]["t"])
+        # Some stocks trade overnight/weekends on other venues, so the "latest day" is the
+        # latest REGULAR session found, never just the newest timestamp.
         today = resample(_session(ones), 300) if ones else []
-        if not today:  # fall back to the 5-day feed's own bars for the latest day
-            today = [b for b in _session(five, "09:28") if date_str(b["t"]) == latest_day]
-            latest_day = date_str(today[-1]["t"]) if today else latest_day
-        prior = [b for b in _session(five, "09:28") if date_str(b["t"]) < latest_day]
+        five_s = _session(five, "09:28")
+        if not today and five_s:  # fall back to the 5-day feed's own bars for the latest day
+            last = date_str(five_s[-1]["t"])
+            today = [b for b in five_s if date_str(b["t"]) == last]
+        if not today:
+            return None
+        latest_day = date_str(today[-1]["t"])
+        prior = [b for b in five_s if date_str(b["t"]) < latest_day]
         days = {}
         for b in prior:
             days.setdefault(date_str(b["t"]), []).append(b)
