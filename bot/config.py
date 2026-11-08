@@ -1,0 +1,66 @@
+"""Settings for Paper Trail 2. Change numbers here, not in the logic files."""
+
+STARTING_CASH = 100.00
+
+# ---- What the bot is allowed to trade -------------------------------------
+STOCKS = {
+    # symbol: (friendly name, kind)
+    "SPY": ("S&P 500 ETF", "etf"),
+    "QQQ": ("Nasdaq-100 ETF", "etf"),
+    "IWM": ("Russell 2000 ETF", "etf"),
+    "AAPL": ("Apple", "stock"),
+    "MSFT": ("Microsoft", "stock"),
+    "NVDA": ("Nvidia", "stock"),
+    "AMZN": ("Amazon", "stock"),
+    "META": ("Meta", "stock"),
+    "GOOGL": ("Alphabet", "stock"),
+    "TSLA": ("Tesla", "stock"),
+    "AMD": ("AMD", "stock"),
+}
+CRYPTO = {
+    "BTC-USD": ("Bitcoin", "crypto"),
+    "ETH-USD": ("Ethereum", "crypto"),
+    "SOL-USD": ("Solana", "crypto"),
+}
+
+# Which stock strategies look at which symbols
+ORB_SYMBOLS = list(STOCKS)               # opening-range breakout: everything
+VWAP_SYMBOLS = ["SPY", "QQQ"]            # VWAP trend: the two big index ETFs
+LATE_MOMENTUM_SYMBOLS = ["SPY"]          # last-half-hour momentum: SPY only
+
+# ---- Money rules -------------------------------------------------------------
+RISK_PER_TRADE = 0.015      # lose at most ~1.5% of the account if a stop is hit
+MAX_POSITION_PCT = 1.00     # one trade may use up to 100% of the account
+MAX_OPEN_POSITIONS = 3
+MIN_TRADE_DOLLARS = 1.00
+DAILY_LOSS_LIMIT = 0.05     # down 5% on the day -> no new trades until tomorrow
+
+# ---- Realistic costs (paper trades still pay these) ---------------------------
+STOCK_SLIPPAGE = 0.0002     # 0.02% worse fill each way (commission-free broker)
+CRYPTO_FEE = 0.004          # 0.40% each way (typical small-account crypto fee/spread)
+
+# ---- Timing (New York time) ------------------------------------------------------
+ORB_WINDOW = ("09:35", "11:00")
+VWAP_WINDOW = ("10:00", "15:15")
+LATE_WINDOW = ("15:30", "15:45")
+STOCK_FLATTEN_AT = "15:50"          # day trades: everything sold before the close
+LATE_EXIT_AT = "15:55"
+STOCK_COOLDOWN_MIN = 30
+CRYPTO_COOLDOWN_MIN = 120
+CRYPTO_BREAKOUT_MAX_HOURS = 24
+CRYPTO_DIP_MAX_HOURS = 12
+
+# If a follower sees a trade late and the price has run this far past the
+# decision price, they should skip it.
+CHASE_LIMIT = 0.005
+
+# NYSE full-day holidays and early (1:00 PM) closes
+HOLIDAYS = {
+    "2026-11-26", "2026-12-25",
+    "2027-01-01", "2027-01-18", "2027-02-15", "2027-03-26", "2027-05-31",
+    "2027-06-18", "2027-07-05", "2027-09-06", "2027-11-25", "2027-12-24",
+}
+EARLY_CLOSES = {"2026-11-27", "2026-12-24", "2027-11-26"}
+
+# Keep the saved file small
+MAX_EQUITY_POINTS = 2500

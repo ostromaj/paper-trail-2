@@ -1,0 +1,40 @@
+name: Reset portfolio to $100
+
+# Archives the current run (all trades and stats) into "Past runs",
+# then starts a fresh $100 portfolio.
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: "Type RESET to confirm"
+        required: true
+        default: ""
+
+permissions:
+  contents: write
+
+concurrency:
+  group: paper-trail-bot
+  cancel-in-progress: false
+
+jobs:
+  reset:
+    if: ${{ inputs.confirm == 'RESET' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Load the saved portfolio
+        run: |
+          if git fetch --depth=1 origin data 2>/dev/null; then
+            git show FETCH_HEAD:dashboard.json > dashboard.json || true
+          fi
+
+      - name: Archive this run and start over
+        run: python3 bot/run.py --state dashboard.json --reset
+
+      - name: Save the portfolio
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: bash bot/save.sh

@@ -1,0 +1,929 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Paper Trail 2</title>
+<meta name="description" content="A $100 pretend day-trading portfolio run by a bot, with plain-English instructions for every trade.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23f6f1e4'/%3E%3Cpath d='M5 22 L12 15 L17 19 L27 8' stroke='%231c5cab' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,600;9..144,800&display=swap" rel="stylesheet">
+<style>
+:root {
+  color-scheme: light;
+  --paper: #f6f1e4;
+  --card: #fffdf7;
+  --rule: #e6dfcc;
+  --line: #ebe4d2;
+  --rule-strong: #d3c9b0;
+  --ink: #1d1b16;
+  --ink-2: #57524a;
+  --ink-3: #857e70;
+  --accent: #1c5cab;
+  --accent-soft: #e3edfa;
+  --series-1: #2a78d6;
+  --gain: #006300;
+  --gain-soft: #e2f2df;
+  --loss: #b42828;
+  --loss-soft: #f9e3e1;
+  --warn: #8a5a00;
+  --warn-soft: #fbefd2;
+  --stamp: #b42828;
+  --shadow: 0 1px 0 rgba(60,50,30,.06), 0 6px 18px -10px rgba(60,50,30,.25);
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  --sans: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+  --display: "Fraunces", Georgia, serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --paper: #151513;
+    --card: #1e1e1b;
+    --rule: #2e2d29;
+    --line: #1c1c19;
+    --rule-strong: #403e38;
+    --ink: #f0efec;
+    --ink-2: #c3c2b7;
+    --ink-3: #8f8d84;
+    --accent: #6da7ec;
+    --accent-soft: #1b2a3d;
+    --series-1: #3987e5;
+    --gain: #4cc24c;
+    --gain-soft: #17301a;
+    --loss: #ef7b7b;
+    --loss-soft: #3a1c1c;
+    --warn: #f0b54a;
+    --warn-soft: #3a2e14;
+    --stamp: #ef7b7b;
+    --shadow: 0 1px 0 rgba(0,0,0,.4), 0 8px 22px -12px rgba(0,0,0,.8);
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --paper: #151513; --card: #1e1e1b; --rule: #2e2d29; --line: #1c1c19; --rule-strong: #403e38;
+  --ink: #f0efec; --ink-2: #c3c2b7; --ink-3: #8f8d84;
+  --accent: #6da7ec; --accent-soft: #1b2a3d; --series-1: #3987e5;
+  --gain: #4cc24c; --gain-soft: #17301a; --loss: #ef7b7b; --loss-soft: #3a1c1c;
+  --warn: #f0b54a; --warn-soft: #3a2e14; --stamp: #ef7b7b;
+  --shadow: 0 1px 0 rgba(0,0,0,.4), 0 8px 22px -12px rgba(0,0,0,.8);
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--paper); color: var(--ink);
+  font: 15px/1.5 var(--sans);
+  background-image: repeating-linear-gradient(to bottom, transparent 0 31px, var(--line) 31px 32px);
+  background-attachment: local;
+}
+.wrap { max-width: 1060px; margin: 0 auto; padding: 18px 16px 80px; }
+.num, .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+a { color: var(--accent); }
+h1, h2, h3 { margin: 0; }
+button { font: inherit; color: inherit; }
+
+/* header */
+header.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.brand { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.brand h1 { font-family: var(--display); font-weight: 800; font-size: 28px; letter-spacing: -.02em; }
+.brand h1 span { color: var(--accent); }
+.brand p { margin: 0; color: var(--ink-3); font-size: 13px; }
+.icon-btn { background: var(--card); border: 1px solid var(--rule-strong); border-radius: 999px; width: 38px; height: 38px; display: grid; place-items: center; cursor: pointer; flex: none; }
+.icon-btn svg { width: 18px; height: 18px; }
+
+.statusbar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+.pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; font-size: 12.5px; background: var(--card); border: 1px solid var(--rule-strong); color: var(--ink-2); }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ink-3); }
+.dot.live { background: var(--gain); box-shadow: 0 0 0 0 var(--gain); animation: ping 2s infinite; }
+@keyframes ping { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--gain) 55%, transparent); } 70% { box-shadow: 0 0 0 7px transparent; } 100% { box-shadow: 0 0 0 0 transparent; } }
+
+/* layout */
+.grid { display: grid; gap: 16px; }
+@media (min-width: 880px) { .grid.two { grid-template-columns: 1.05fr .95fr; align-items: start; } }
+.card { background: var(--card); border: 1px solid var(--rule-strong); border-radius: 14px; box-shadow: var(--shadow); padding: 16px; min-width: 0; }
+.card h2 { font-family: var(--display); font-weight: 600; font-size: 19px; letter-spacing: -.01em; display: flex; align-items: center; gap: 8px; }
+.card h2 small { font: 500 12px var(--sans); color: var(--ink-3); margin-left: auto; letter-spacing: 0; }
+.card .sub { color: var(--ink-3); font-size: 13px; margin: 2px 0 12px; }
+section { margin-top: 16px; }
+
+/* hero */
+.hero { display: grid; gap: 14px; }
+@media (min-width: 720px) { .hero { grid-template-columns: auto 1fr; align-items: end; } }
+.hero .label { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-3); }
+.big { font-family: var(--mono); font-weight: 600; font-size: clamp(40px, 11vw, 60px); line-height: 1; letter-spacing: -.03em; }
+.delta { font-family: var(--mono); font-size: 15px; margin-top: 6px; }
+.up { color: var(--gain); } .down { color: var(--loss); } .flat { color: var(--ink-2); }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 8px; }
+.stat { border-top: 1px dashed var(--rule-strong); padding-top: 6px; }
+.stat b { display: block; font: 600 16px var(--mono); }
+.stat span { font-size: 11.5px; color: var(--ink-3); }
+
+/* do this now */
+.ticket { position: relative; border: 2px solid var(--ink); border-radius: 12px; padding: 16px; background: var(--card); overflow: hidden; }
+.ticket.buy { border-color: var(--gain); }
+.ticket.sell { border-color: var(--loss); }
+.ticket.move { border-color: var(--warn); }
+.ticket.idle { border-style: dashed; border-color: var(--rule-strong); }
+.ticket .stamp { position: absolute; top: 14px; right: -38px; transform: rotate(35deg); background: var(--stamp); color: var(--card); font: 700 11px var(--mono); letter-spacing: .15em; padding: 3px 44px; }
+.ticket .kicker { font: 600 12px var(--mono); letter-spacing: .12em; text-transform: uppercase; }
+.ticket.buy .kicker { color: var(--gain); } .ticket.sell .kicker { color: var(--loss); } .ticket.move .kicker { color: var(--warn); }
+.ticket .headline { font-family: var(--display); font-weight: 800; font-size: clamp(24px, 6.5vw, 32px); line-height: 1.15; margin: 4px 0 6px; letter-spacing: -.02em; }
+.ticket .when { color: var(--ink-2); font-size: 13.5px; }
+.steps { margin: 14px 0 0; padding: 0; list-style: none; counter-reset: s; }
+.steps li { counter-increment: s; position: relative; padding: 8px 0 8px 36px; border-top: 1px solid var(--rule); }
+.steps li::before { content: counter(s); position: absolute; left: 0; top: 8px; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font: 600 12px var(--mono); background: var(--ink); color: var(--card); }
+.skip { margin-top: 10px; padding: 8px 10px; border-radius: 8px; background: var(--warn-soft); color: var(--warn); font-size: 13px; }
+.row-btns { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+.btn { border: 1px solid var(--rule-strong); background: var(--card); border-radius: 9px; padding: 8px 12px; font-size: 13.5px; cursor: pointer; min-height: 38px; }
+.btn:hover { border-color: var(--ink-3); }
+.btn.primary { background: var(--ink); color: var(--card); border-color: var(--ink); }
+.btn.danger { color: var(--loss); border-color: color-mix(in srgb, var(--loss) 45%, var(--rule-strong)); }
+.btn.danger.solid { background: var(--loss); color: #fff; border-color: var(--loss); }
+
+/* heads up */
+.watch { display: grid; gap: 10px; }
+.w { border: 1px solid var(--rule); border-radius: 11px; padding: 12px; }
+.w.ready { border-color: var(--gain); background: var(--gain-soft); }
+.w.close { border-color: color-mix(in srgb, var(--warn) 50%, var(--rule)); }
+.w-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.w-head .sym { font: 600 16px var(--mono); }
+.w-head .strat { color: var(--ink-3); font-size: 12.5px; }
+.chip { font: 600 11px var(--mono); letter-spacing: .04em; padding: 2px 8px; border-radius: 999px; text-transform: uppercase; background: var(--rule); color: var(--ink-2); }
+.chip.ready { background: var(--gain); color: var(--card); }
+.chip.close { background: var(--warn-soft); color: var(--warn); }
+.chip.holding { background: var(--accent-soft); color: var(--accent); }
+.chip.buy { background: var(--gain-soft); color: var(--gain); }
+.chip.sell { background: var(--loss-soft); color: var(--loss); }
+.chip.move { background: var(--warn-soft); color: var(--warn); }
+.w-head .px { margin-left: auto; font: 500 13px var(--mono); color: var(--ink-2); }
+.meter { display: flex; gap: 4px; margin: 10px 0 8px; }
+.meter i { flex: 1; height: 6px; border-radius: 3px; background: var(--rule); }
+.meter i.on { background: var(--gain); }
+.w.close .meter i.on { background: var(--warn); }
+.checks { list-style: none; margin: 0; padding: 0; font-size: 13.5px; }
+.checks li { display: grid; grid-template-columns: 20px 1fr; gap: 6px; padding: 3px 0; }
+.checks li .mark { font: 700 13px var(--mono); }
+.checks li.ok .mark { color: var(--gain); }
+.checks li.no .mark { color: var(--ink-3); }
+.checks li.no { color: var(--ink-2); }
+.checks .det { color: var(--ink-3); font-family: var(--mono); font-size: 12px; }
+.trigger { margin-top: 8px; font-size: 13px; color: var(--ink-2); font-style: italic; }
+.more { margin-top: 10px; }
+
+/* positions */
+.pos { border: 1px solid var(--rule); border-radius: 11px; padding: 12px; margin-top: 10px; }
+.pos:first-of-type { margin-top: 0; }
+.pos-top { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.pos-top .sym { font: 600 17px var(--mono); }
+.pos-top .pl { margin-left: auto; font: 600 16px var(--mono); }
+.kv { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 6px 12px; margin-top: 8px; }
+.kv div span { display: block; font-size: 11px; color: var(--ink-3); text-transform: uppercase; letter-spacing: .06em; }
+.kv div b { font: 500 14px var(--mono); }
+.plan { margin-top: 8px; font-size: 13px; color: var(--ink-2); }
+.empty { color: var(--ink-3); font-size: 14px; padding: 10px 0; }
+
+/* chart */
+.seg { display: inline-flex; border: 1px solid var(--rule-strong); border-radius: 9px; overflow: hidden; margin-left: auto; }
+.seg button { border: 0; background: transparent; padding: 5px 10px; font: 500 12.5px var(--sans); cursor: pointer; color: var(--ink-2); }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--card); }
+.chart-wrap { position: relative; margin-top: 10px; touch-action: pan-y; }
+#chart { display: block; width: 100%; height: 220px; }
+.tip { position: absolute; pointer-events: none; background: var(--card); border: 1px solid var(--rule-strong); border-radius: 8px; padding: 6px 9px; font-size: 12px; box-shadow: var(--shadow); white-space: nowrap; transform: translate(-50%, -110%); display: none; }
+.tip b { display: block; font: 600 14px var(--mono); }
+.tip span { color: var(--ink-3); }
+
+/* log */
+.log { list-style: none; margin: 0; padding: 0; }
+.log > li { border-top: 1px solid var(--rule); }
+.log > li:first-child { border-top: 0; }
+.log summary { list-style: none; cursor: pointer; display: grid; grid-template-columns: auto 1fr auto; gap: 4px 10px; align-items: center; padding: 10px 2px; }
+.log summary::-webkit-details-marker { display: none; }
+.log .t { font: 500 12px var(--mono); color: var(--ink-3); grid-column: 1 / -1; }
+.log .what { font-size: 14.5px; min-width: 0; }
+.log .what b { font-family: var(--mono); }
+.log .res { font: 600 14px var(--mono); text-align: right; }
+.log .body { padding: 0 2px 12px; font-size: 13.5px; color: var(--ink-2); }
+.log .body .steps li { padding-top: 6px; padding-bottom: 6px; }
+.ind { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.ind span { font: 500 11.5px var(--mono); background: var(--paper); border: 1px solid var(--rule); border-radius: 6px; padding: 2px 6px; color: var(--ink-2); }
+.filter { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+
+.feed { list-style: none; margin: 0; padding: 0; font-size: 13px; }
+.feed li { display: grid; grid-template-columns: 96px 1fr; gap: 8px; padding: 5px 0; border-top: 1px dashed var(--rule); }
+.feed li:first-child { border-top: 0; }
+.feed .t { font: 500 12px var(--mono); color: var(--ink-3); }
+
+/* past runs */
+.run { border: 1px solid var(--rule); border-radius: 11px; margin-top: 10px; }
+.run summary { cursor: pointer; padding: 12px; display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; list-style: none; }
+.run summary::-webkit-details-marker { display: none; }
+.run .rn { font: 600 15px var(--mono); }
+.run .rd { font-size: 12.5px; color: var(--ink-3); grid-column: 1; }
+.run .rr { font: 600 15px var(--mono); text-align: right; grid-row: 1 / span 2; grid-column: 2; align-self: center; }
+.run .inner { padding: 0 12px 12px; }
+
+/* explain */
+.rules { display: grid; gap: 10px; }
+@media (min-width: 720px) { .rules { grid-template-columns: 1fr 1fr; } }
+.rule { border-left: 3px solid var(--accent); padding: 2px 0 2px 12px; }
+.rule h3 { font-size: 15px; }
+.rule p { margin: 4px 0 0; font-size: 13.5px; color: var(--ink-2); }
+.rule .src { font-size: 12px; color: var(--ink-3); }
+.fine { font-size: 13px; color: var(--ink-2); }
+.fine li { margin: 4px 0; }
+
+/* toast + modal */
+.toast { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%) translateY(120%); background: var(--ink); color: var(--card); padding: 10px 16px; border-radius: 10px; font-size: 14px; transition: transform .3s; z-index: 30; max-width: calc(100% - 32px); }
+.toast.show { transform: translateX(-50%) translateY(0); }
+dialog { border: 1px solid var(--rule-strong); border-radius: 14px; background: var(--card); color: var(--ink); padding: 20px; max-width: min(460px, calc(100% - 32px)); box-shadow: var(--shadow); }
+dialog::backdrop { background: rgba(0,0,0,.45); }
+dialog h3 { font-family: var(--display); font-size: 21px; }
+dialog p { color: var(--ink-2); font-size: 14px; }
+dialog input { width: 100%; font: 14px var(--mono); padding: 9px 10px; border-radius: 8px; border: 1px solid var(--rule-strong); background: var(--paper); color: var(--ink); }
+.banner { border: 1px solid var(--warn); background: var(--warn-soft); color: var(--warn); border-radius: 10px; padding: 10px 12px; font-size: 13.5px; margin-bottom: 14px; display: none; }
+footer { margin-top: 26px; color: var(--ink-3); font-size: 12.5px; text-align: center; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+@media (prefers-reduced-motion: reduce) { .dot.live { animation: none; } .toast { transition: none; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <h1>Paper <span>Trail</span> 2</h1>
+      <p>Claude's $100 pretend day-trading desk</p>
+    </div>
+    <button class="icon-btn" id="themeBtn" aria-label="Switch light or dark mode" title="Light / dark">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+    </button>
+  </header>
+
+  <div class="banner" id="banner"></div>
+
+  <div class="statusbar">
+    <span class="pill"><i class="dot" id="mktDot"></i><span id="mktLabel">Loading...</span></span>
+    <span class="pill" id="checked">Last check: --</span>
+    <span class="pill" id="nextCheck">Next check: --</span>
+    <span class="pill" id="runPill">Run #1</span>
+  </div>
+
+  <!-- HERO -->
+  <div class="card">
+    <div class="hero">
+      <div>
+        <div class="label">Portfolio value</div>
+        <div class="big" id="equity">$100.00</div>
+        <div class="delta" id="delta">+$0.00 (+0.00%) since $100 start</div>
+        <div class="delta" id="dayDelta" style="font-size:13px"></div>
+      </div>
+      <div class="stats" id="stats"></div>
+    </div>
+  </div>
+
+  <div class="grid two">
+    <div>
+      <!-- DO THIS NOW -->
+      <section>
+        <div class="card">
+          <h2>Do this now <small id="nowAge"></small></h2>
+          <p class="sub">The most recent move, written so anyone can copy it.</p>
+          <div id="doNow"></div>
+        </div>
+      </section>
+
+      <!-- OPEN POSITIONS -->
+      <section>
+        <div class="card">
+          <h2>Holding right now <small id="cashLabel"></small></h2>
+          <p class="sub">What the bot owns, and exactly when it will sell.</p>
+          <div id="positions"></div>
+        </div>
+      </section>
+
+      <!-- CHART -->
+      <section>
+        <div class="card">
+          <h2>Portfolio value over time
+            <span class="seg" role="group" aria-label="Chart range">
+              <button data-range="day" aria-pressed="false">24h</button>
+              <button data-range="week" aria-pressed="false">7d</button>
+              <button data-range="all" aria-pressed="true">This run</button>
+            </span>
+          </h2>
+          <div class="chart-wrap" id="chartWrap">
+            <svg id="chart" role="img" aria-label="Line chart of portfolio value"></svg>
+            <div class="tip" id="tip"></div>
+          </div>
+          <p class="sub" style="margin:6px 0 0">Dashed line = the $100 starting point.</p>
+        </div>
+      </section>
+    </div>
+
+    <div>
+      <!-- HEADS UP -->
+      <section>
+        <div class="card">
+          <h2>Heads up: about to trade <small id="watchCount"></small></h2>
+          <p class="sub">Every rule has a checklist. When every box is checked, the bot buys. Green = buying now, yellow = one condition away.</p>
+          <div class="watch" id="watch"></div>
+          <button class="btn more" id="watchMore" hidden>Show all setups</button>
+        </div>
+      </section>
+
+      <!-- ACTIVITY -->
+      <section>
+        <div class="card">
+          <h2>Bot heartbeat</h2>
+          <p class="sub">What it did each time it checked the markets.</p>
+          <ul class="feed" id="feed"></ul>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- TRADE LOG -->
+  <section>
+    <div class="card">
+      <h2>Trade log <small id="logCount"></small></h2>
+      <p class="sub">Every decision with the exact time it was made. Tap one to see the instructions and the indicator readings.</p>
+      <div class="filter seg" role="group" aria-label="Filter trades" id="logFilter" style="margin:0 0 8px">
+        <button data-f="all" aria-pressed="true">All</button>
+        <button data-f="BUY" aria-pressed="false">Buys</button>
+        <button data-f="SELL" aria-pressed="false">Sells</button>
+        <button data-f="MOVE STOP" aria-pressed="false">Stop moves</button>
+      </div>
+      <ul class="log" id="log"></ul>
+      <button class="btn more" id="logMore" hidden>Show older trades</button>
+    </div>
+  </section>
+
+  <!-- PAST RUNS + RESET -->
+  <section>
+    <div class="card">
+      <h2>Past runs</h2>
+      <p class="sub">Every time the portfolio is reset, the old run is saved here with its full trade log.</p>
+      <div id="runs"></div>
+      <div class="row-btns" style="margin-top:14px">
+        <button class="btn danger" id="resetBtn">Reset to $100 and start over</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section>
+    <div class="card">
+      <h2>The rules, in plain English</h2>
+      <p class="sub">Five rules, each based on published research. Stocks are bought and sold the same day. Crypto trades around the clock.</p>
+      <div class="rules">
+        <div class="rule">
+          <h3>1. Opening-Range Breakout (stocks)</h3>
+          <p>Watch the first 5 minutes after 9:30 AM. If buyers won that candle on heavy volume, buy when the price breaks above that candle's high and stays above VWAP. Sell by 3:50 PM.</p>
+          <div class="src">Zarattini &amp; Aziz, "Can Day Trading Really Be Profitable?" (2023)</div>
+        </div>
+        <div class="rule">
+          <h3>2. VWAP Trend (SPY, QQQ)</h3>
+          <p>VWAP is the average price everyone paid today. Buy when the price is above it and the short-term trend is up; sell when a 5-minute candle closes back below it.</p>
+          <div class="src">Zarattini &amp; Aziz, "VWAP: The Holy Grail for Day Trading Systems" (2023)</div>
+        </div>
+        <div class="rule">
+          <h3>3. Late-Day Momentum (SPY)</h3>
+          <p>If the first half hour of the day and the 3:00 to 3:30 stretch were both up, buy SPY around 3:30 and sell at 3:55. The last half hour tends to follow the first.</p>
+          <div class="src">Gao, Han, Li &amp; Zhou, "Market Intraday Momentum," Journal of Financial Economics (2018)</div>
+        </div>
+        <div class="rule">
+          <h3>4. Crypto Breakout</h3>
+          <p>In an uptrend, buy when a 15-minute candle closes above the 24-hour high on big volume. A trailing stop follows the price up; sell within 24 hours.</p>
+          <div class="src">Bitcoin intraday time-series momentum research; Quantpedia, "Trend-following and Mean-reversion in Bitcoin" (2022)</div>
+        </div>
+        <div class="rule">
+          <h3>5. Crypto Dip-Buy</h3>
+          <p>In an uptrend, buy when the coin gets oversold (RSI under 30) and starts bouncing. Fixed profit target and stop; sell within 12 hours.</p>
+          <div class="src">Short-term mean reversion, same Bitcoin study</div>
+        </div>
+        <div class="rule">
+          <h3>Money rules</h3>
+          <p>Each trade risks about 1.5% of the account if its stop hits. One trade can use up to the whole $100. At most 3 trades open at once. Down 5% on the day means no new trades until tomorrow.</p>
+          <div class="src">Paper trades still pay realistic costs: 0.02% slippage on stocks, 0.40% per side on crypto.</div>
+        </div>
+      </div>
+      <h3 style="margin-top:18px;font-size:15px">Good to know before you copy a trade</h3>
+      <ul class="fine">
+        <li><b>This is pretend money.</b> Nothing here is financial advice, and past results don't predict future ones.</li>
+        <li><b>Most day traders lose money.</b> In a study of nearly 20,000 Brazilian day traders who kept at it for 300+ days, 97% lost money (Chague, De-Losso &amp; Giovannetti, 2019). An independent replication of the opening-range breakout found its edge mostly disappears after trading costs. That's why this page shows every loss and every fee.</li>
+        <li><b>Timing:</b> the bot checks the markets about every 5 minutes (GitHub sometimes runs it a few minutes late). If you see a trade late and the price has run past the "skip it if" number, skip it.</li>
+        <li><b>Prices:</b> stock prices come from Yahoo Finance and crypto from Coinbase, via free public feeds.</li>
+        <li><b>Real accounts:</b> brokers have their own rules for frequent day trading in small accounts. Check yours before trading real money.</li>
+      </ul>
+    </div>
+  </section>
+
+  <footer>
+    Paper Trail 2 · built by Claude · <a id="repoLink" href="#">source on GitHub</a>
+  </footer>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<dialog id="resetDlg">
+  <h3>Start over at $100?</h3>
+  <p>Anything still open is sold at the last price the bot saw. The current run, with its whole trade log, moves to <b>Past runs</b>. Then a fresh $100 run begins.</p>
+  <div id="resetBody"></div>
+  <div class="row-btns" style="justify-content:flex-end">
+    <button class="btn" id="resetCancel">Cancel</button>
+    <button class="btn danger solid" id="resetGo">Reset</button>
+  </div>
+  <details style="margin-top:14px">
+    <summary style="cursor:pointer;font-size:13px;color:var(--ink-3)">One-tap reset setup (owner only)</summary>
+    <p style="font-size:13px">Without a token, Reset opens GitHub, where you tap <b>Run workflow</b>. For one-tap resets, create a fine-grained token for this repo with <b>Actions: Read and write</b> and paste it here. It's saved only in this browser.</p>
+    <input id="tokenInput" type="password" placeholder="github_pat_..." autocomplete="off">
+    <div class="row-btns"><button class="btn" id="tokenSave">Save token</button><button class="btn" id="tokenClear">Forget token</button></div>
+  </details>
+</dialog>
+
+<script>
+(() => {
+  "use strict";
+  // ---------------------------------------------------------------- config
+  const DEFAULT_OWNER = "ostromaj", DEFAULT_REPO = "paper-trail-2";
+  let OWNER = DEFAULT_OWNER, REPO = DEFAULT_REPO;
+  const host = location.hostname;
+  if (host.endsWith(".github.io")) {
+    OWNER = host.split(".")[0];
+    const seg = location.pathname.split("/").filter(Boolean)[0];
+    if (seg) REPO = seg;
+  }
+  const params = new URLSearchParams(location.search);
+  const DEMO = params.has("demo");
+  const API_URL = `https://api.github.com/repos/${OWNER}/${REPO}/contents/dashboard.json?ref=data`;
+  const RAW_URL = `https://raw.githubusercontent.com/${OWNER}/${REPO}/data/dashboard.json`;
+  const REPO_URL = `https://github.com/${OWNER}/${REPO}`;
+  const RESET_PAGE = `${REPO_URL}/actions/workflows/reset.yml`;
+  document.getElementById("repoLink").href = REPO_URL;
+
+  const $ = (id) => document.getElementById(id);
+  const store = {
+    get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch {} },
+    del(k) { try { localStorage.removeItem(k); } catch {} },
+  };
+
+  // ---------------------------------------------------------------- theme
+  const saved = store.get("pt-theme");
+  if (saved) document.documentElement.dataset.theme = saved;
+  $("themeBtn").onclick = () => {
+    const cur = document.documentElement.dataset.theme ||
+      (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    const next = cur === "dark" ? "light" : "dark";
+    document.documentElement.dataset.theme = next;
+    store.set("pt-theme", next);
+    if (S) drawChart();
+  };
+
+  // ---------------------------------------------------------------- helpers
+  const money = (x, sign) => {
+    if (x == null || isNaN(x)) return "--";
+    const a = Math.abs(x);
+    const d = (a > 0 && a < 0.1 && !sign) ? 4 : 2;
+    const s = a.toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
+    return (x < 0 ? "-" : sign ? "+" : "") + "$" + s;
+  };
+  const pct = (x) => (x == null || isNaN(x)) ? "--" : (x >= 0 ? "+" : "") + x.toFixed(2) + "%";
+  const cls = (x) => x > 0.0049 ? "up" : x < -0.0049 ? "down" : "flat";
+  const arrow = (x) => x > 0.0049 ? "▲ " : x < -0.0049 ? "▼ " : "";
+  const ticker = (s) => s.endsWith("-USD") ? s.replace("-USD", "") : s;
+  const etTime = (t, opts) => new Date(t * 1000).toLocaleString("en-US", Object.assign({ timeZone: "America/New_York", hour: "numeric", minute: "2-digit" }, opts || {}));
+  const ago = (t) => {
+    const m = Math.round((Date.now() / 1000 - t) / 60);
+    if (m < 1) return "just now";
+    if (m < 60) return m + " min ago";
+    const h = Math.floor(m / 60);
+    if (h < 24) return h + " hr " + (m % 60) + " min ago";
+    return Math.floor(h / 24) + " days ago";
+  };
+  function el(tag, attrs, ...kids) {
+    const n = document.createElement(tag);
+    if (attrs) for (const [k, v] of Object.entries(attrs)) {
+      if (v == null || v === false) continue;
+      if (k === "class") n.className = v;
+      else if (k === "text") n.textContent = v;
+      else if (k.startsWith("on")) n.addEventListener(k.slice(2), v);
+      else n.setAttribute(k, v === true ? "" : v);
+    }
+    for (const k of kids.flat()) if (k != null && k !== false) n.append(k.nodeType ? k : document.createTextNode(String(k)));
+    return n;
+  }
+  function toast(msg) {
+    const t = $("toast"); t.textContent = msg; t.classList.add("show");
+    clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("show"), 4200);
+  }
+
+  // ---------------------------------------------------------------- state + live prices
+  let S = null, etag = null, live = {}, range = "all", logFilter = "all", logLimit = 25, watchAll = false;
+  const priceOf = (sym) => (live[sym] && live[sym].p) || (S.prices[sym] && S.prices[sym].price);
+
+  function liveEquity() {
+    let e = S.cash;
+    for (const p of S.positions) e += p.qty * (priceOf(p.symbol) || p.entry_price);
+    return e;
+  }
+
+  // ---------------------------------------------------------------- render: top
+  function renderTop() {
+    const eq = liveEquity();
+    const ch = eq - S.starting_cash;
+    $("equity").textContent = money(eq);
+    const d = $("delta");
+    d.className = "delta " + cls(ch);
+    d.textContent = `${arrow(ch)}${money(ch, true)} (${pct(ch / S.starting_cash * 100)}) since $100 start`;
+    const dp = eq - S.day.start_equity;
+    const dd = $("dayDelta");
+    dd.className = "delta " + cls(dp);
+    dd.textContent = `Today: ${money(dp, true)}` + (S.halted ? "  ·  daily loss limit hit, no new trades today" : "");
+    const st = S.stats || {};
+    const items = [
+      [st.trades_closed ?? 0, "trades closed"],
+      [st.win_rate == null ? "--" : st.win_rate + "%", "win rate"],
+      [money(st.best), "best trade"],
+      [money(st.worst), "worst trade"],
+      [money(st.fees), "fees paid"],
+      [(st.max_drawdown_pct ?? 0).toFixed(1) + "%", "max drop from peak"],
+    ];
+    $("stats").replaceChildren(...items.map(([b, s]) => el("div", { class: "stat" }, el("b", { text: b }), el("span", { text: s }))));
+    const m = S.market || {};
+    $("mktDot").className = "dot" + (m.open ? " live" : "");
+    $("mktLabel").textContent = (m.label || "") + " · crypto 24/7";
+    $("checked").textContent = "Last check: " + (S.last_run ? `${etTime(S.last_run)} ET (${ago(S.last_run)})` : "--");
+    const nxt = S.last_run ? S.last_run + 300 : null;
+    const late = nxt && Date.now() / 1000 - nxt > 900;
+    $("nextCheck").textContent = nxt ? (late ? "Next check: overdue, GitHub is slow" : "Next check: ~" + etTime(nxt) + " ET") : "Next check: --";
+    $("runPill").textContent = `Run #${S.run_number} · since ${etTime(S.run_started, { month: "short", day: "numeric" })}`;
+    $("cashLabel").textContent = "Cash: " + money(S.cash);
+    const b = $("banner");
+    if (DEMO) { b.style.display = "block"; b.textContent = "Demo mode: showing simulated test data, not the live bot."; }
+    else if (late) { b.style.display = "block"; b.textContent = `The bot hasn't checked in since ${etTime(S.last_run)} ET. GitHub's scheduler can lag. Treat these numbers as stale until it catches up.`; }
+    else b.style.display = "none";
+  }
+
+  // ---------------------------------------------------------------- render: do this now
+  function headline(t) {
+    if (t.action === "BUY") return `Buy ${money(t.amount)} of ${t.kind === "crypto" ? t.name + " (" + ticker(t.symbol) + ")" : t.symbol}`;
+    if (t.action === "SELL") return `Sell all your ${ticker(t.symbol)}`;
+    return `Move your ${ticker(t.symbol)} stop to ${money(t.stop)}`;
+  }
+  const kindOf = (a) => a === "BUY" ? "buy" : a === "SELL" ? "sell" : "move";
+
+  function stepsList(steps) { return el("ol", { class: "steps" }, steps.map((s) => el("li", { text: s }))); }
+
+  function renderDoNow() {
+    const box = $("doNow");
+    const last = S.trades[S.trades.length - 1];
+    const fresh = last && (Date.now() / 1000 - last.decided_at) < 20 * 60;
+    $("nowAge").textContent = last ? "decided " + ago(last.decided_at) : "";
+    if (!last) {
+      box.replaceChildren(el("div", { class: "ticket idle" },
+        el("div", { class: "kicker", text: "Nothing to do yet" }),
+        el("div", { class: "headline", text: "Waiting for a setup" }),
+        el("div", { class: "when", text: "No trades in this run yet. Watch the Heads up list: when a setup turns green, the instructions show up here." })));
+      return;
+    }
+    const k = kindOf(last.action);
+    const tk = el("div", { class: `ticket ${fresh ? k : "idle"}` },
+      fresh ? el("div", { class: "stamp", text: "NEW" }) : null,
+      el("div", { class: "kicker", text: fresh ? (last.action === "MOVE STOP" ? "Update your stop" : last.action + " now") : "Latest instruction (not new)" }),
+      el("div", { class: "headline", text: headline(last) }),
+      el("div", { class: "when" },
+        `Decided ${last.decided_at_text} at ${money(last.price)}`,
+        last.action === "SELL" && last.pnl != null ? el("span", { class: cls(last.pnl) }, ` · result ${money(last.pnl, true)} (${pct(last.pnl_pct)})`) : null),
+      el("div", { class: "when", style: "margin-top:4px", text: "Why: " + last.reason }),
+      stepsList(last.steps || []),
+      last.action === "BUY" && fresh ? el("div", { class: "skip", text: last.skip_if }) : null,
+      !fresh ? el("div", { class: "when", style: "margin-top:10px", text: "This is older than 20 minutes. If you didn't act on it, don't chase it now. Check Holding right now for what's still open." }) : null,
+      el("div", { class: "row-btns" },
+        el("button", { class: "btn", onclick: () => copySteps(last) }, "Copy instructions")));
+    box.replaceChildren(tk);
+  }
+  function copySteps(t) {
+    const txt = `${headline(t)} (decided ${t.decided_at_text} at ${money(t.price)})\n` +
+      (t.steps || []).map((s, i) => `${i + 1}. ${s}`).join("\n") + (t.skip_if ? `\n${t.skip_if}` : "");
+    navigator.clipboard?.writeText(txt).then(() => toast("Instructions copied"), () => toast("Couldn't copy on this device"));
+  }
+
+  // ---------------------------------------------------------------- render: positions
+  function renderPositions() {
+    const box = $("positions");
+    if (!S.positions.length) { box.replaceChildren(el("div", { class: "empty", text: "Nothing open. All cash, waiting for the next setup." })); return; }
+    box.replaceChildren(...S.positions.map((p) => {
+      const px = priceOf(p.symbol) || p.entry_price;
+      const val = p.qty * px;
+      const pl = val - p.cost;
+      const sellBy = p.kind === "crypto" ? "by " + etTime(p.exit_by, { weekday: "short" }) + " ET" : (p.strategy === "LATE" ? "at 3:55 PM ET" : "by 3:50 PM ET");
+      return el("div", { class: "pos" },
+        el("div", { class: "pos-top" },
+          el("span", { class: "sym", text: ticker(p.symbol) }),
+          el("span", { class: "chip holding", text: p.strategy_name }),
+          el("span", { class: "pl " + cls(pl), text: `${arrow(pl)}${money(pl, true)} (${pct(pl / p.cost * 100)})` })),
+        el("div", { class: "kv" },
+          el("div", null, el("span", { text: "Put in" }), el("b", { text: money(p.cost) })),
+          el("div", null, el("span", { text: "Worth now" }), el("b", { text: money(val) })),
+          el("div", null, el("span", { text: "Bought at" }), el("b", { text: money(p.entry_price) })),
+          el("div", null, el("span", { text: "Price now" }), el("b", { text: money(px) })),
+          el("div", null, el("span", { text: "Stop (sell if hit)" }), el("b", { text: money(p.stop) })),
+          el("div", null, el("span", { text: p.target ? "Target" : "Sell" }), el("b", { text: p.target ? money(p.target) : sellBy }))),
+        el("div", { class: "plan", text: `Bought ${etTime(p.entry_time, { weekday: "short" })} ET. ${p.exit_plan}` }));
+    }));
+  }
+
+  // ---------------------------------------------------------------- render: heads up
+  const STATUS_TEXT = { ready: "Buying now", close: "1 condition away", watching: "Watching", holding: "Holding", "off-hours": "Not in its time window" };
+  function renderWatch() {
+    const list = S.watchlist || [];
+    const box = $("watch");
+    const shown = watchAll ? list : list.filter((w) => w.status === "ready" || w.status === "close" || w.status === "holding").slice(0, 6);
+    const top = shown.length ? shown : list.slice(0, 4);
+    $("watchCount").textContent = `${list.filter((w) => w.status === "close").length} close · ${list.length} tracked`;
+    if (!list.length) {
+      box.replaceChildren(el("div", { class: "empty", text: "No setups to watch right now. Stock rules wake up at 9:35 AM ET on market days; crypto is checked around the clock." }));
+    } else {
+      box.replaceChildren(...top.map((w) => {
+        const px = priceOf(w.symbol) || w.price;
+        return el("div", { class: "w " + w.status },
+          el("div", { class: "w-head" },
+            el("span", { class: "sym", text: ticker(w.symbol) }),
+            el("span", { class: "strat", text: w.strategy_name }),
+            el("span", { class: "chip " + w.status, text: STATUS_TEXT[w.status] }),
+            el("span", { class: "px", text: money(px) })),
+          el("div", { class: "meter", role: "img", "aria-label": `${w.met} of ${w.total} conditions met` },
+            Array.from({ length: w.total }, (_, i) => el("i", { class: i < w.met ? "on" : "" }))),
+          el("ul", { class: "checks" }, w.checks.map((c) => el("li", { class: c.ok ? "ok" : "no" },
+            el("span", { class: "mark", text: c.ok ? "✓" : "✗" }),
+            el("span", null, c.label, " ", el("span", { class: "det", text: c.detail ? `(${c.detail})` : "" }))))),
+          el("div", { class: "trigger", text: w.trigger }));
+      }));
+    }
+    const mb = $("watchMore");
+    mb.hidden = list.length <= top.length && !watchAll;
+    mb.textContent = watchAll ? "Show only the close ones" : `Show all ${list.length} setups`;
+  }
+  $("watchMore").onclick = () => { watchAll = !watchAll; renderWatch(); };
+
+  // ---------------------------------------------------------------- render: trade log
+  function tradeItem(t) {
+    const k = kindOf(t.action);
+    const res = t.action === "SELL" && t.pnl != null
+      ? el("span", { class: "res " + cls(t.pnl), text: money(t.pnl, true) })
+      : el("span", { class: "res", style: "color:var(--ink-3)", text: t.action === "BUY" ? money(t.amount) : money(t.stop) });
+    const ind = t.indicators ? el("div", { class: "ind" }, Object.entries(t.indicators).filter(([, v]) => v != null).map(([k2, v]) => el("span", { text: `${k2}: ${v}` }))) : null;
+    return el("li", null, el("details", null,
+      el("summary", null,
+        el("span", { class: "t", text: `#${t.id} · ${t.decided_at_text}` }),
+        el("span", { class: "what" }, el("span", { class: "chip " + k, text: t.action }), " ", el("b", { text: ticker(t.symbol) }), ` at ${money(t.price)}`),
+        res),
+      el("div", { class: "body" },
+        el("div", { text: t.reason }),
+        t.action === "SELL" && t.entry_price ? el("div", { style: "margin-top:4px", text: `Bought at ${money(t.entry_price)}, held ${t.held_minutes} min, ${t.strategy_name}. Fees ${money(t.fee || 0)}.` }) : el("div", { style: "margin-top:4px", text: t.strategy_name }),
+        t.checks ? el("ul", { class: "checks", style: "margin-top:6px" }, t.checks.map((c) => el("li", { class: "ok" }, el("span", { class: "mark", text: "✓" }), el("span", null, c.label, " ", el("span", { class: "det", text: c.detail ? `(${c.detail})` : "" }))))) : null,
+        ind,
+        stepsList(t.steps || []))));
+  }
+  function renderLog() {
+    const all = S.trades.slice().reverse().filter((t) => logFilter === "all" || t.action === logFilter);
+    $("logCount").textContent = `${S.trades.length} entries`;
+    const box = $("log");
+    if (!all.length) box.replaceChildren(el("li", { class: "empty", text: "No trades yet in this run." }));
+    else box.replaceChildren(...all.slice(0, logLimit).map(tradeItem));
+    $("logMore").hidden = all.length <= logLimit;
+  }
+  $("logMore").onclick = () => { logLimit += 50; renderLog(); };
+  $("logFilter").addEventListener("click", (e) => {
+    const b = e.target.closest("button"); if (!b) return;
+    logFilter = b.dataset.f; logLimit = 25;
+    for (const x of $("logFilter").children) x.setAttribute("aria-pressed", x === b);
+    renderLog();
+  });
+
+  function renderFeed() {
+    $("feed").replaceChildren(...(S.activity || []).slice(0, 14).map((a) =>
+      el("li", null, el("span", { class: "t", text: etTime(a.t, { weekday: "short" }) }), el("span", { text: a.text + (a.count > 1 ? ` (still checking: ${a.count} checks in a row)` : "") }))));
+  }
+
+  // ---------------------------------------------------------------- render: past runs
+  function renderRuns() {
+    const runs = S.past_runs || [];
+    const box = $("runs");
+    if (!runs.length) { box.replaceChildren(el("div", { class: "empty", text: "No past runs yet. This is run #" + S.run_number + "." })); return; }
+    box.replaceChildren(...runs.map((r) => {
+      const ch = r.final_equity - r.starting_cash;
+      const st = r.stats || {};
+      return el("details", { class: "run" },
+        el("summary", null,
+          el("span", { class: "rn", text: `Run #${r.run_number}: ${money(r.starting_cash)} → ${money(r.final_equity)}` }),
+          el("span", { class: "rd", text: `${r.started_text} to ${r.ended_text} · ${st.trades_closed || 0} trades · win rate ${st.win_rate == null ? "--" : st.win_rate + "%"} · fees ${money(st.fees || 0)}` }),
+          el("span", { class: "rr " + cls(ch), text: pct(ch / r.starting_cash * 100) })),
+        el("div", { class: "inner" },
+          r.trades.length ? el("ul", { class: "log" }, r.trades.slice().reverse().map(tradeItem)) : el("div", { class: "empty", text: "No trades in this run." })));
+    }));
+  }
+
+  // ---------------------------------------------------------------- chart
+  const NS = "http://www.w3.org/2000/svg";
+  function sv(tag, attrs) { const n = document.createElementNS(NS, tag); for (const k in attrs) n.setAttribute(k, attrs[k]); return n; }
+  let chartPts = [], chartGeom = null;
+  function drawChart() {
+    const svg = $("chart");
+    const W = svg.clientWidth || 600, H = 220;
+    svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+    svg.replaceChildren();
+    let pts = (S.equity_curve || []).slice();
+    const now = Date.now() / 1000;
+    if (!pts.length || now > pts[pts.length - 1][0]) pts.push([now, liveEquity()]);
+    if (range === "day") pts = pts.filter((p) => p[0] >= now - 86400);
+    if (range === "week") pts = pts.filter((p) => p[0] >= now - 7 * 86400);
+    if (pts.length < 2) pts = [[now - 3600, pts[0] ? pts[0][1] : S.starting_cash], [now, liveEquity()]];
+    chartPts = pts;
+    const css = getComputedStyle(document.documentElement);
+    const C = (v) => css.getPropertyValue(v).trim();
+    const pad = { l: 52, r: 12, t: 12, b: 26 };
+    const x0 = pts[0][0], x1 = pts[pts.length - 1][0];
+    let lo = Math.min(...pts.map((p) => p[1]), S.starting_cash), hi = Math.max(...pts.map((p) => p[1]), S.starting_cash);
+    const span = Math.max(hi - lo, 0.5);
+    lo -= span * 0.12; hi += span * 0.12;
+    const X = (t) => pad.l + (t - x0) / Math.max(x1 - x0, 1) * (W - pad.l - pad.r);
+    const Y = (v) => pad.t + (hi - v) / (hi - lo) * (H - pad.t - pad.b);
+    chartGeom = { X, Y, pad, W, H };
+    // grid + y labels
+    const ticks = 4;
+    for (let i = 0; i <= ticks; i++) {
+      const v = lo + (hi - lo) * i / ticks, y = Y(v);
+      svg.append(sv("line", { x1: pad.l, x2: W - pad.r, y1: y, y2: y, stroke: C("--rule"), "stroke-width": 1 }));
+      const tx = sv("text", { x: pad.l - 6, y: y + 4, "text-anchor": "end", fill: C("--ink-3"), "font-size": 11, "font-family": "IBM Plex Mono, monospace" });
+      tx.textContent = "$" + v.toFixed(span < 5 ? 2 : 0);
+      svg.append(tx);
+    }
+    // x labels
+    const fmt = (x1 - x0) > 2 * 86400 ? { month: "short", day: "numeric" } : { hour: "numeric", minute: "2-digit" };
+    for (let i = 0; i <= 3; i++) {
+      const t = x0 + (x1 - x0) * i / 3;
+      const tx = sv("text", { x: X(t), y: H - 6, "text-anchor": i === 0 ? "start" : i === 3 ? "end" : "middle", fill: C("--ink-3"), "font-size": 11, "font-family": "IBM Plex Sans, sans-serif" });
+      tx.textContent = new Date(t * 1000).toLocaleString("en-US", Object.assign({ timeZone: "America/New_York" }, fmt));
+      svg.append(tx);
+    }
+    // baseline $100
+    svg.append(sv("line", { x1: pad.l, x2: W - pad.r, y1: Y(S.starting_cash), y2: Y(S.starting_cash), stroke: C("--ink-3"), "stroke-width": 1, "stroke-dasharray": "4 4" }));
+    // area + line
+    const d = pts.map((p, i) => `${i ? "L" : "M"}${X(p[0]).toFixed(1)},${Y(p[1]).toFixed(1)}`).join("");
+    svg.append(sv("path", { d: d + `L${X(x1)},${H - pad.b}L${X(x0)},${H - pad.b}Z`, fill: C("--series-1"), opacity: 0.08 }));
+    svg.append(sv("path", { d, fill: "none", stroke: C("--series-1"), "stroke-width": 2, "stroke-linejoin": "round", "stroke-linecap": "round" }));
+    const last = pts[pts.length - 1];
+    svg.append(sv("circle", { cx: X(last[0]), cy: Y(last[1]), r: 4.5, fill: C("--series-1"), stroke: C("--card"), "stroke-width": 2 }));
+    // hover layer
+    const hair = sv("line", { y1: pad.t, y2: H - pad.b, stroke: C("--ink-3"), "stroke-width": 1, visibility: "hidden" });
+    const dot = sv("circle", { r: 5, fill: C("--series-1"), stroke: C("--card"), "stroke-width": 2, visibility: "hidden" });
+    svg.append(hair, dot);
+    chartGeom.hair = hair; chartGeom.dot = dot;
+    svg.setAttribute("aria-label", `Portfolio value, now ${money(last[1])}, started at ${money(S.starting_cash)}`);
+  }
+  function hover(ev) {
+    if (!chartGeom || !chartPts.length) return;
+    const svg = $("chart"), r = svg.getBoundingClientRect();
+    const px = (ev.clientX - r.left) * (chartGeom.W / r.width);
+    let best = chartPts[0], bd = Infinity;
+    for (const p of chartPts) { const d = Math.abs(chartGeom.X(p[0]) - px); if (d < bd) { bd = d; best = p; } }
+    const x = chartGeom.X(best[0]), y = chartGeom.Y(best[1]);
+    for (const n of [chartGeom.hair, chartGeom.dot]) n.setAttribute("visibility", "visible");
+    chartGeom.hair.setAttribute("x1", x); chartGeom.hair.setAttribute("x2", x);
+    chartGeom.dot.setAttribute("cx", x); chartGeom.dot.setAttribute("cy", y);
+    const tip = $("tip");
+    tip.replaceChildren(el("b", { text: money(best[1]) }), el("span", { text: new Date(best[0] * 1000).toLocaleString("en-US", { timeZone: "America/New_York", weekday: "short", hour: "numeric", minute: "2-digit" }) + " ET" }));
+    tip.style.display = "block";
+    const left = x / chartGeom.W * r.width;
+    tip.style.left = Math.min(Math.max(left, 60), r.width - 60) + "px";
+    tip.style.top = (y / chartGeom.H * r.height) + "px";
+  }
+  function unhover() {
+    $("tip").style.display = "none";
+    if (chartGeom) for (const n of [chartGeom.hair, chartGeom.dot]) n.setAttribute("visibility", "hidden");
+  }
+  $("chartWrap").addEventListener("pointermove", hover);
+  $("chartWrap").addEventListener("pointerdown", hover);
+  $("chartWrap").addEventListener("pointerleave", unhover);
+  document.querySelectorAll("[data-range]").forEach((b) => b.onclick = () => {
+    range = b.dataset.range;
+    document.querySelectorAll("[data-range]").forEach((x) => x.setAttribute("aria-pressed", x === b));
+    drawChart();
+  });
+  new ResizeObserver(() => S && drawChart()).observe($("chartWrap"));
+
+  function renderAll() {
+    renderTop(); renderDoNow(); renderPositions(); renderWatch(); renderLog(); renderFeed(); renderRuns(); drawChart();
+  }
+
+  // ---------------------------------------------------------------- loading
+  async function fetchState() {
+    if (DEMO) {
+      const r = await fetch("tests/sim_dashboard.json?t=" + Date.now());
+      return r.ok ? r.json() : null;
+    }
+    try {
+      const h = { Accept: "application/vnd.github.raw+json" };
+      if (etag) h["If-None-Match"] = etag;
+      const r = await fetch(API_URL, { headers: h, cache: "no-store" });
+      if (r.status === 304) return "same";
+      if (r.ok) { etag = r.headers.get("ETag"); return r.json(); }
+      if (r.status === 404) return "missing";
+    } catch {}
+    try {
+      const r = await fetch(RAW_URL + "?t=" + Math.floor(Date.now() / 60000), { cache: "no-store" });
+      if (r.ok) return r.json();
+      if (r.status === 404) return "missing";
+    } catch {}
+    return null;
+  }
+
+  let lastSeenTrade = null;
+  async function refresh() {
+    const s = await fetchState();
+    if (s === "same") { if (S) renderAll(); return; }
+    if (s === "missing" || !s) {
+      if (!S) {
+        $("doNow").replaceChildren(el("div", { class: "ticket idle" },
+          el("div", { class: "kicker", text: "Starting up" }),
+          el("div", { class: "headline", text: s === "missing" ? "The bot hasn't run yet" : "Can't reach the data right now" }),
+          el("div", { class: "when", text: s === "missing" ? "Its first check saves the portfolio here. That usually happens within 5 to 10 minutes of setup." : "Trying again in a minute." })));
+        $("mktLabel").textContent = "Waiting for the bot";
+      }
+      return;
+    }
+    const prevRun = S && S.run_number;
+    S = s;
+    const newest = S.trades.length ? S.trades[S.trades.length - 1].id : 0;
+    const key = S.run_number + ":" + newest;
+    if (lastSeenTrade && key !== lastSeenTrade && prevRun === S.run_number && newest) {
+      const t = S.trades[S.trades.length - 1];
+      toast("New trade: " + headline(t));
+      document.title = "(!) " + headline(t) + " · Paper Trail 2";
+      if ("Notification" in window && Notification.permission === "granted") {
+        try { new Notification("Paper Trail 2", { body: headline(t) }); } catch {}
+      }
+    } else if (prevRun && prevRun !== S.run_number) {
+      toast(`Reset done. Run #${S.run_number} started with $100.`);
+    }
+    lastSeenTrade = key;
+    renderAll();
+    pollLive();
+  }
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) { document.title = "Paper Trail 2"; refresh(); } });
+
+  // live crypto prices between bot runs (Coinbase public ticker)
+  async function pollLive() {
+    if (!S || DEMO) return;
+    const syms = new Set(S.positions.filter((p) => p.kind === "crypto").map((p) => p.symbol));
+    for (const w of S.watchlist || []) if (w.kind === "crypto" && (w.status === "close" || w.status === "ready")) syms.add(w.symbol);
+    await Promise.all([...syms].map(async (sym) => {
+      try {
+        const r = await fetch(`https://api.exchange.coinbase.com/products/${sym}/ticker`);
+        if (r.ok) { const j = await r.json(); const p = parseFloat(j.price); if (p > 0) live[sym] = { p, t: Date.now() }; }
+      } catch {}
+    }));
+    if (syms.size) { renderTop(); renderPositions(); renderWatch(); drawChart(); }
+  }
+
+  // ---------------------------------------------------------------- reset
+  const TOKEN_KEY = "pt-reset-token";
+  $("resetBtn").onclick = () => {
+    const tok = store.get(TOKEN_KEY);
+    $("resetBody").replaceChildren(el("p", { style: "font-size:13px", text: tok
+      ? "One-tap reset is set up. The reset takes about a minute to show up here."
+      : "This opens GitHub. Tap Run workflow, type RESET in the box, then tap the green Run workflow button. Only the repo owner can do this." }));
+    $("resetGo").textContent = tok ? "Reset now" : "Open GitHub";
+    $("resetDlg").showModal();
+  };
+  $("resetCancel").onclick = () => $("resetDlg").close();
+  $("tokenSave").onclick = () => { const v = $("tokenInput").value.trim(); if (v) { store.set(TOKEN_KEY, v); $("tokenInput").value = ""; toast("Token saved in this browser"); $("resetDlg").close(); } };
+  $("tokenClear").onclick = () => { store.del(TOKEN_KEY); toast("Token forgotten"); $("resetDlg").close(); };
+  $("resetGo").onclick = async () => {
+    const tok = store.get(TOKEN_KEY);
+    if (!tok) { window.open(RESET_PAGE, "_blank", "noopener"); $("resetDlg").close(); return; }
+    $("resetGo").disabled = true;
+    try {
+      const r = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/actions/workflows/reset.yml/dispatches`, {
+        method: "POST",
+        headers: { Accept: "application/vnd.github+json", Authorization: "Bearer " + tok, "Content-Type": "application/json" },
+        body: JSON.stringify({ ref: "main", inputs: { confirm: "RESET" } }),
+      });
+      if (r.status === 204) { toast("Reset requested. It shows up here in about a minute."); setTimeout(refresh, 45000); setTimeout(refresh, 90000); }
+      else if (r.status === 401 || r.status === 403) toast("GitHub rejected the token. Check it has Actions: Read and write on this repo.");
+      else toast("Reset failed (GitHub said " + r.status + "). Try the GitHub page instead.");
+    } catch { toast("Couldn't reach GitHub. Try again."); }
+    $("resetGo").disabled = false;
+    $("resetDlg").close();
+  };
+
+  // ---------------------------------------------------------------- go
+  refresh();
+  setInterval(refresh, 60000);
+  setInterval(pollLive, 30000);
+  setInterval(() => { if (S) { renderTop(); } }, 30000);
+})();
+</script>
+</body>
+</html>
