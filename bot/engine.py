@@ -324,6 +324,10 @@ def cycle(state, market):
     held_stocks = {p["symbol"] for p in state["positions"] if p["kind"] != "crypto"}
 
     # 1. prices
+    want = set(C.STOCKS) if mkt_open else held_stocks
+    need_daily = mkt_open and state["atr_cache"]["date"] != today
+    if hasattr(market, "prefetch"):
+        market.prefetch(sorted(want), list(C.CRYPTO), need_daily)
     crypto_data = {}
     for sym in C.CRYPTO:
         d = market.crypto(sym)
@@ -332,20 +336,20 @@ def cycle(state, market):
         else:
             state["errors"].append(f"No data for {sym} this run")
     stock_data = {}
-    want = set(C.STOCKS) if mkt_open else held_stocks
     for sym in sorted(want):
         d = market.stock_intraday(sym)
         if d and d["bars"]:
             stock_data[sym] = d
         else:
             state["errors"].append(f"No data for {sym} this run")
-    if mkt_open and state["atr_cache"]["date"] != today:
+    if need_daily:
         vals = {}
         for sym in C.STOCKS:
             d = market.stock_daily(sym)
             if d and d["bars"]:
-                bars = [b for b in d["bars"] if date_str(b["t"]) != today]
-                vals[sym] = atr(bars[-30:], 14)
+                bars = [b for b in d["bars"] if date_str(b["t"]) < today]
+                if bars:
+                    vals[sym] = {"atr": atr(bars[-30:], 14), "prev_close": bars[-1]["c"]}
         if vals:
             state["atr_cache"] = {"date": today, "values": vals}
     for sym, d in list(crypto_data.items()) + list(stock_data.items()):

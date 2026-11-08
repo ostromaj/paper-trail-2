@@ -61,7 +61,10 @@ def _bar_at(day, hhmm):
 
 
 # ----------------------------------------------------------------------------------
-def evaluate_stock(symbol, data, daily_atr, now, traded_today):
+def evaluate_stock(symbol, data, daily, now, traded_today):
+    """daily = {"atr": 14-day ATR, "prev_close": yesterday's official close} (either may be missing)."""
+    daily = daily or {}
+    daily_atr = daily.get("atr")
     name, kind = C.STOCKS[symbol]
     price = data["price"]
     days = split_days(data["bars"], now, 300)
@@ -83,7 +86,7 @@ def evaluate_stock(symbol, data, daily_atr, now, traded_today):
     # --- ORB -----------------------------------------------------------------
     if symbol in C.ORB_SYMBOLS:
         or_hi, or_lo = first["h"], first["l"]
-        prior_first = [d[0]["v"] for d in prior if d and hm(d[0]["t"]) == "09:30"][-4:]
+        prior_first = data.get("open_vols") or [d[0]["v"] for d in prior if d][-4:]
         rvol = first["v"] / (sum(prior_first) / len(prior_first)) if prior_first and sum(prior_first) else 1.0
         checks = [
             _check("Opening 5-min candle was green", first["c"] > first["o"],
@@ -126,8 +129,8 @@ def evaluate_stock(symbol, data, daily_atr, now, traded_today):
         ))
 
     # --- Late-day momentum ---------------------------------------------------
-    if symbol in C.LATE_MOMENTUM_SYMBOLS and prior:
-        prev_close = prior[-1][-1]["c"]
+    if symbol in C.LATE_MOMENTUM_SYMBOLS and (prior or daily.get("prev_close")):
+        prev_close = daily.get("prev_close") or prior[-1][-1]["c"]
         b10 = _bar_at(today, "10:00")
         b1500, b1530 = _bar_at(today, "15:00"), _bar_at(today, "15:30")
         r1 = (b10["c"] / prev_close - 1) if b10 else None

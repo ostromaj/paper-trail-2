@@ -22,14 +22,17 @@ for sym in ["SPY", "NVDA"]:
         continue
     last_day = date_str(d["bars"][-1]["t"])
     day_bars = [b for b in d["bars"] if date_str(b["t"]) == last_day]
-    daily_atr = atr([b for b in dd["bars"] if date_str(b["t"]) != last_day][-30:], 14)
-    print(f"OK   {sym}: {len(d['bars'])} 5-min bars, last day {last_day} ({len(day_bars)} bars), "
-          f"price {d['price']}, daily ATR {daily_atr:.2f}")
+    prior_daily = [b for b in dd["bars"] if date_str(b["t"]) < last_day]
+    daily = {"atr": atr(prior_daily[-30:], 14), "prev_close": prior_daily[-1]["c"]}
+    print(f"OK   {sym} via {d['source']}: {len(d['bars'])} 5-min bars, last day {last_day} ({len(day_bars)} bars, "
+          f"first {nice_datetime(day_bars[0]['t'])}, last {nice_datetime(day_bars[-1]['t'])}), price {d['price']}, "
+          f"daily ATR {daily['atr']:.2f}, prev close {daily['prev_close']}, open vols {[round(v) for v in d['open_vols']]}")
     fired = set()
     for b in day_bars:
         now = b["t"] + 300
         sub = {"bars": [x for x in d["bars"] if x["t"] + 300 <= now], "price": b["c"]}
-        for c in S.evaluate_stock(sym, sub, daily_atr, now, fired):
+        sub["open_vols"] = d["open_vols"]
+        for c in S.evaluate_stock(sym, sub, daily, now, fired):
             if c["ready"]:
                 fired.add((c["strategy"], sym))
                 print(f"     replay: {c['strategy_name']} would BUY at {nice_datetime(now)} @ {c['price']:.2f}, stop {c['stop']:.2f}")
