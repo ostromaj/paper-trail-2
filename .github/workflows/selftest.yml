@@ -1,0 +1,12 @@
+name: Self-test data feeds
+
+on:
+  workflow_dispatch:
+
+jobs:
+  selftest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+      - run: python3 bot/selftest.py
