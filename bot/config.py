@@ -68,3 +68,8 @@ EARLY_CLOSES = {"2026-11-27", "2026-12-24", "2027-11-26"}
 
 # Keep the saved file small
 MAX_EQUITY_POINTS = 2500
+
+# ---- Phone alerts (ntfy app) ----------------------------------------------------------
+# Subscribe to this topic in the ntfy app. A GitHub secret named NTFY_TOPIC overrides it.
+NTFY_TOPIC = "papertrail2-678499f24ef1"
+NOTIFY_ACTIONS = ["BUY", "SELL", "MOVE STOP"]   # remove any you don't want pinged about

@@ -8,6 +8,8 @@ start=$SECONDS
 limit=$((5 * 3600 + 30 * 60))
 handed_off=0
 while python3 bot/window.py in-session; do
+  # pick up any code updates pushed during the day (this script runs from a copy, so it's safe)
+  git fetch -q --depth=1 origin "${GITHUB_REF_NAME:-main}" && git reset -q --hard FETCH_HEAD || true
   bash bot/cycle.sh || echo "This check failed; trying again next time."
   if [ $((SECONDS - start)) -ge $limit ]; then
     echo "Near GitHub's time limit. Handing off to a fresh run."

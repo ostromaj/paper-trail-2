@@ -43,7 +43,11 @@ def main():
         print(f"Reset done. Now on run #{state['run_number']}.")
     else:
         t0 = time.time()
+        before = state["next_id"]
         state = engine.cycle(state, market)
+        new = [t for t in state["trades"] if t["id"] >= before]
+        with open(os.path.join(os.path.dirname(os.path.abspath(args.state)), "notify.json"), "w") as f:
+            json.dump(new, f)
         s = state["stats"]
         print(f"Cycle done in {time.time() - t0:.1f}s. Equity ${s['equity']:.2f} ({s['return_pct']:+.2f}%), "
               f"{len(state['positions'])} open, {s['trades_closed']} closed trades.")

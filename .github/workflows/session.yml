@@ -25,4 +25,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: bash bot/session.sh
+        run: cp bot/session.sh "$RUNNER_TEMP/session.sh" && bash "$RUNNER_TEMP/session.sh"

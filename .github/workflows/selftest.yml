@@ -10,3 +10,5 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - run: python3 bot/selftest.py
+      - name: Send a test phone alert
+        run: python3 bot/notify.py --test
