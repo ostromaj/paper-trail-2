@@ -126,7 +126,12 @@ def open_position(state, c, now):
     dollars = plan_size(state, c["kind"], price, stop)
     if dollars < C.MIN_TRADE_DOLLARS:
         why = "the crypto budget (25% of the account) is used up" if c["kind"] == "crypto" else "there's no free cash"
-        _log(state, now, f"{c['symbol']} {c['strategy_name']} was ready, but {why}. Skipped.")
+        key = f"{date_str(now)}:{c['strategy']}:{c['symbol']}"
+        logged = state.setdefault("skip_logged", [])
+        if key not in logged:  # say it once per setup per day, not every minute
+            _log(state, now, f"{c['symbol']} {c['strategy_name']} was ready, but {why}. Skipped.")
+            logged.append(key)
+            del logged[:-60]
         return None
     if c["kind"] == "crypto":
         fee = dollars * C.CRYPTO_FEE
