@@ -6,6 +6,8 @@
 <title>Paper Trail 2</title>
 <meta name="description" content="A $100 pretend day-trading portfolio run by a bot, with plain-English instructions for every trade.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23f6f1e4'/%3E%3Cpath d='M5 22 L12 15 L17 19 L27 8' stroke='%231c5cab' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<meta name="theme-color" content="#f6f1e4">
+<meta name="apple-mobile-web-app-title" content="Paper Trail">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,600;9..144,800&display=swap" rel="stylesheet">
@@ -245,13 +247,47 @@ section { margin-top: 16px; }
 
 /* toast + modal */
 .toast { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%) translateY(120%); background: var(--ink); color: var(--card); padding: 10px 16px; border-radius: 10px; font-size: 14px; transition: transform .3s; z-index: 30; max-width: calc(100% - 32px); }
-.toast.show { transform: translateX(-50%) translateY(0); }
+.toast { opacity: 0; visibility: hidden; transition: transform .3s, opacity .3s, visibility .3s; }
+.toast.show { transform: translateX(-50%) translateY(0); opacity: 1; visibility: visible; }
 dialog { border: 1px solid var(--rule-strong); border-radius: 14px; background: var(--card); color: var(--ink); padding: 20px; max-width: min(460px, calc(100% - 32px)); box-shadow: var(--shadow); }
 dialog::backdrop { background: rgba(0,0,0,.45); }
 dialog h3 { font-family: var(--display); font-size: 21px; }
 dialog p { color: var(--ink-2); font-size: 14px; }
 dialog input { width: 100%; font: 14px var(--mono); padding: 9px 10px; border-radius: 8px; border: 1px solid var(--rule-strong); background: var(--paper); color: var(--ink); }
 .banner { border: 1px solid var(--warn); background: var(--warn-soft); color: var(--warn); border-radius: 10px; padding: 10px 12px; font-size: 13.5px; margin-bottom: 14px; display: none; }
+/* quick start + guide */
+section, .card[id] { scroll-margin-top: 12px; }
+.qs { position: relative; border: 2px solid var(--accent); background: var(--accent-soft); border-radius: 14px; padding: 14px 16px; margin-bottom: 14px; }
+.qs h2 { font-family: var(--display); font-size: 19px; margin: 0 28px 8px 0; }
+.qs ol { margin: 0; padding-left: 20px; display: grid; gap: 6px; font-size: 14.5px; }
+.qs .x { position: absolute; top: 8px; right: 8px; width: 32px; height: 32px; border: 0; background: transparent; cursor: pointer; font-size: 18px; color: var(--ink-2); }
+.guide details { border: 1px solid var(--rule); border-radius: 11px; margin-top: 10px; background: var(--card); }
+.guide summary { cursor: pointer; padding: 12px 14px; font-weight: 600; font-size: 15.5px; list-style: none; display: flex; align-items: center; gap: 10px; }
+.guide summary::-webkit-details-marker { display: none; }
+.guide summary::after { content: "+"; margin-left: auto; font: 600 18px var(--mono); color: var(--ink-3); }
+.guide details[open] summary::after { content: "–"; }
+.guide summary .chip { flex: none; }
+.guide .gbody { padding: 0 14px 14px; font-size: 14.5px; }
+.guide .gbody p { margin: 6px 0; }
+.guide .gbody .steps li { padding-top: 7px; padding-bottom: 7px; }
+.guide .tip { background: var(--paper); border-left: 3px solid var(--accent); padding: 8px 10px; border-radius: 0 8px 8px 0; font-size: 13.5px; color: var(--ink-2); margin-top: 8px; }
+.guide dl { margin: 6px 0 0; display: grid; gap: 8px; }
+.guide dt { font-weight: 600; }
+.guide dd { margin: 0; color: var(--ink-2); font-size: 14px; }
+.scale { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 6px; }
+.scale label { font-size: 14px; }
+.scale .money-in { display: flex; align-items: center; border: 1px solid var(--rule-strong); border-radius: 9px; background: var(--paper); padding: 0 10px; }
+.scale input { width: 110px; border: 0; background: transparent; font: 600 16px var(--mono); color: var(--ink); padding: 8px 4px; outline: none; }
+.yours { margin-top: 8px; padding: 8px 10px; border-radius: 8px; background: var(--accent-soft); color: var(--accent); font: 600 13.5px var(--mono); }
+.help-link { font-size: 13.5px; margin-top: 10px; display: inline-block; }
+.jump { display: none; }
+@media (max-width: 719px) {
+  .jump { display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; background: var(--card); border-top: 1px solid var(--rule-strong); padding: 6px 6px calc(6px + env(safe-area-inset-bottom)); justify-content: space-around; box-shadow: 0 -6px 18px -12px rgba(0,0,0,.4); }
+  .jump a { text-decoration: none; color: var(--ink-2); font: 600 12px var(--sans); padding: 6px 8px; border-radius: 8px; text-align: center; min-width: 56px; }
+  .jump a:active { background: var(--paper); }
+  .wrap { padding-bottom: 110px; }
+  .toast { bottom: calc(70px + env(safe-area-inset-bottom)); }
+}
 footer { margin-top: 26px; color: var(--ink-3); font-size: 12.5px; text-align: center; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 @media (prefers-reduced-motion: reduce) { .dot.live { animation: none; } .toast { transition: none; } }
@@ -264,12 +300,25 @@ footer { margin-top: 26px; color: var(--ink-3); font-size: 12.5px; text-align: c
       <h1>Paper <span>Trail</span> 2</h1>
       <p>Claude's $100 pretend day-trading desk</p>
     </div>
+    <div style="display:flex;gap:8px">
+    <a class="icon-btn" href="#guide" aria-label="How to follow along" title="How to follow along" style="text-decoration:none;font:700 17px var(--sans);color:var(--ink)">?</a>
     <button class="icon-btn" id="themeBtn" aria-label="Switch light or dark mode" title="Light / dark">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
     </button>
+    </div>
   </header>
 
   <div class="banner" id="banner"></div>
+
+  <div class="qs" id="quickStart" hidden>
+    <button class="x" id="qsHide" aria-label="Hide quick start">✕</button>
+    <h2>Following along? 3 steps</h2>
+    <ol>
+      <li><b>Get pinged.</b> Install the free <b>ntfy</b> app and subscribe to the bot's alerts. <a href="#g-setup">How</a></li>
+      <li><b>Have an app that buys in dollars</b> (Robinhood, Fidelity, Schwab, Webull…) and one for crypto (Coinbase, Kraken…).</li>
+      <li><b>When it pings, open this page and do what "Do this now" says.</b> Every step is spelled out. <a href="#guide">Full guide</a></li>
+    </ol>
+  </div>
 
   <div class="statusbar">
     <span class="pill"><i class="dot" id="mktDot"></i><span id="mktLabel">Loading...</span></span>
@@ -294,7 +343,7 @@ footer { margin-top: 26px; color: var(--ink-3); font-size: 12.5px; text-align: c
   <div class="grid two">
     <div>
       <!-- DO THIS NOW -->
-      <section>
+      <section id="now">
         <div class="card">
           <h2>Do this now <small id="nowAge"></small></h2>
           <p class="sub">The most recent move, written so anyone can copy it.</p>
@@ -303,7 +352,7 @@ footer { margin-top: 26px; color: var(--ink-3); font-size: 12.5px; text-align: c
       </section>
 
       <!-- OPEN POSITIONS -->
-      <section>
+      <section id="holding">
         <div class="card">
           <h2>Holding right now <small id="cashLabel"></small></h2>
           <p class="sub">What the bot owns, and exactly when it will sell.</p>
@@ -318,7 +367,7 @@ footer { margin-top: 26px; color: var(--ink-3); font-size: 12.5px; text-align: c
             <span class="seg" role="group" aria-label="Chart range">
               <button data-range="day" aria-pressed="false">24h</button>
               <button data-range="week" aria-pressed="false">7d</button>
-              <button data-range="all" aria-pressed="true">This run</button>
+              <button data-range="all" aria-pressed="true">All</button>
             </span>
           </h2>
           <div class="chart-wrap" id="chartWrap">
@@ -332,7 +381,7 @@ footer { margin-top: 26px; color: var(--ink-3); font-size: 12.5px; text-align: c
 
     <div>
       <!-- HEADS UP -->
-      <section>
+      <section id="heads">
         <div class="card">
           <h2>Heads up: about to trade <small id="watchCount"></small></h2>
           <p class="sub">Every rule has a checklist. When every box is checked, the bot buys. Green = buying now, yellow = one condition away. Each card has the In and Out prices, so you can set alerts or orders ahead of time.</p>
@@ -353,7 +402,7 @@ footer { margin-top: 26px; color: var(--ink-3); font-size: 12.5px; text-align: c
   </div>
 
   <!-- TRADE LOG -->
-  <section>
+  <section id="log-sec">
     <div class="card">
       <h2>Trade log <small id="logCount"></small></h2>
       <p class="sub">Every decision with the exact time it was made. Tap one to see the instructions and the indicator readings.</p>
@@ -377,6 +426,100 @@ footer { margin-top: 26px; color: var(--ink-3); font-size: 12.5px; text-align: c
       <div class="row-btns" style="margin-top:14px">
         <button class="btn danger" id="resetBtn">Reset to $100 and start over</button>
       </div>
+    </div>
+  </section>
+
+  <!-- HOW TO FOLLOW ALONG -->
+  <section id="guide">
+    <div class="card guide">
+      <h2>How to follow along on your phone</h2>
+      <p class="sub">Pretend portfolio, real instructions. You don't need to watch all day: get the pings, act when one comes in.</p>
+
+      <div class="scale">
+        <label for="acctIn"><b>Scale to my account:</b> I'm following with</label>
+        <span class="money-in">$<input id="acctIn" inputmode="decimal" placeholder="100" aria-label="Your account size in dollars"></span>
+      </div>
+      <p class="sub" style="margin:4px 0 0" id="acctNote">Leave blank to use the bot's own amounts. Fill it in and every trade shows your amount too (same percent of the account).</p>
+
+      <details id="g-setup" open>
+        <summary><span class="chip holding">Once</span> Set up (5 minutes)</summary>
+        <div class="gbody">
+          <ol class="steps">
+            <li><b>Install ntfy</b> (free, no account) from the App Store or Google Play.</li>
+            <li>In ntfy, tap <b>+</b> and subscribe to this topic: <b class="mono" id="topicName"></b>
+              <div class="row-btns" style="margin-top:8px">
+                <button class="btn" id="copyTopic">Copy topic</button>
+                <a class="btn" id="openNtfy" href="#" style="text-decoration:none">Open in ntfy</a>
+              </div>
+            </li>
+            <li><b>Stocks:</b> use an app that lets you buy in dollars (fractional shares): Robinhood, Fidelity, Schwab, Webull, and others. Turn on dollar-based or fractional buying if it's a setting.</li>
+            <li><b>Crypto:</b> any app that sells Bitcoin, Ethereum and Solana, such as Coinbase or Kraken.</li>
+            <li><b>Put this page on your home screen.</b> iPhone: Safari → Share → Add to Home Screen. Android: Chrome → ⋮ → Add to Home screen.</li>
+          </ol>
+        </div>
+      </details>
+
+      <details id="g-buy">
+        <summary><span class="chip buy">Buy</span> When you get a BUY ping</summary>
+        <div class="gbody">
+          <ol class="steps">
+            <li>Tap the ping. This page opens. Look at <b>Do this now</b>.</li>
+            <li><b>Check the "skip it if" price.</b> If the price has already run past it, skip this one. Chasing a late entry is how the math goes bad.</li>
+            <li>In your app: search the ticker → <b>Buy</b> → choose <b>dollars</b> → enter the amount → order type <b>Market</b> → submit.</li>
+            <li><b>Protect it right away.</b> Tap the stock → <b>Sell</b> → order type <b>Stop</b> (or "Stop loss") → enter the <b>Stop</b> price → all shares → submit. If your app won't allow a stop on fractional shares, set a <b>price alert</b> at the Stop price and sell when it rings.</li>
+            <li>If the card shows a <b>Target</b>, set a price alert there too, and sell when it rings.</li>
+          </ol>
+          <div class="tip">Stocks are day trades: the bot sells them by 3:50 PM. If you can't check your phone near 3:50, either skip the trade or sell whenever you can that afternoon.</div>
+        </div>
+      </details>
+
+      <details id="g-sell">
+        <summary><span class="chip sell">Sell</span> When you get a SELL ping</summary>
+        <div class="gbody">
+          <ol class="steps">
+            <li>Cancel the stop order or price alerts you set for that ticker (otherwise they could fire later).</li>
+            <li>Sell <b>all</b> of it → order type <b>Market</b> → submit.</li>
+          </ol>
+          <div class="tip">If your stop order already sold it for you, you're done. Just cancel any leftover alerts.</div>
+        </div>
+      </details>
+
+      <details id="g-move">
+        <summary><span class="chip move">Move stop</span> When you get a MOVE STOP ping</summary>
+        <div class="gbody">
+          <ol class="steps">
+            <li>The trade is going well, so the bot raises its safety net.</li>
+            <li>Cancel your old stop order (or alert) → place a new one at the new Stop price.</li>
+          </ol>
+        </div>
+      </details>
+
+      <details id="g-missed">
+        <summary><span class="chip">Oops</span> Missed a ping?</summary>
+        <div class="gbody">
+          <p>Open <b>Holding right now</b>. Anything listed there is still open, with its current Stop. Anything not listed has already been sold.</p>
+          <p><b>Never act on an old BUY.</b> If "Do this now" says it's older than 20 minutes, let it go and catch the next one.</p>
+        </div>
+      </details>
+
+      <details id="g-words">
+        <summary><span class="chip">ABC</span> What the words mean</summary>
+        <div class="gbody">
+          <dl>
+            <dt>Market order</dt><dd>Buy or sell right now at the current price.</dd>
+            <dt>Stop (stop-loss)</dt><dd>A price where you sell automatically to cap the loss.</dd>
+            <dt>Target</dt><dd>A price where you sell to take the profit.</dd>
+            <dt>Trailing stop</dt><dd>A stop that moves up as the price rises, but never moves down.</dd>
+            <dt>Fractional shares</dt><dd>Buying part of a share, so $25 can buy a slice of a $600 stock.</dd>
+            <dt>Breakout</dt><dd>The price pushes above a recent high, often the start of a move.</dd>
+            <dt>VWAP</dt><dd>The average price everyone paid today. Above it means buyers are in control.</dd>
+            <dt>RSI</dt><dd>A 0 to 100 momentum gauge. Under 30 means oversold, over 70 overheated.</dd>
+            <dt>Volume</dt><dd>How many shares traded. Big volume means a move has real interest behind it.</dd>
+          </dl>
+        </div>
+      </details>
+
+      <div class="tip" style="margin-top:12px">This is a pretend portfolio and not financial advice. If you ever copy it with real money, start tiny: most day traders lose money, and brokers have extra rules for frequent day trading in small accounts.</div>
     </div>
   </section>
 
@@ -422,7 +565,7 @@ footer { margin-top: 26px; color: var(--ink-3); font-size: 12.5px; text-align: c
         <li><b>This is pretend money.</b> Nothing here is financial advice, and past results don't predict future ones.</li>
         <li><b>Most day traders lose money.</b> In a study of nearly 20,000 Brazilian day traders who kept at it for 300+ days, 97% lost money (Chague, De-Losso &amp; Giovannetti, 2019). An independent replication of the opening-range breakout found its edge mostly disappears after trading costs. That's why this page shows every loss and every fee.</li>
         <li><b>Timing:</b> on market days the bot checks every minute from 7:00 AM until just after the close. Nights and weekends it checks crypto less often. If you see a trade late and the price has run past the "skip it if" number, skip it.</li>
-        <li><b>Prices:</b> stock prices come from Yahoo Finance and crypto from Coinbase, via free public feeds.</li>
+        <li><b>Prices:</b> stock prices come from CNBC (with Nasdaq as a backup) and crypto from Coinbase, via free public feeds.</li>
         <li><b>Real accounts:</b> brokers have their own rules for frequent day trading in small accounts. Check yours before trading real money.</li>
       </ul>
     </div>
@@ -434,6 +577,14 @@ footer { margin-top: 26px; color: var(--ink-3); font-size: 12.5px; text-align: c
 </div>
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<nav class="jump" aria-label="Jump to">
+  <a href="#now">Do now</a>
+  <a href="#heads">Heads up</a>
+  <a href="#holding">Holding</a>
+  <a href="#log-sec">Log</a>
+  <a href="#guide">How to</a>
+</nav>
 
 <dialog id="resetDlg">
   <h3>Start over at $100?</h3>
@@ -578,6 +729,25 @@ footer { margin-top: 26px; color: var(--ink-3); font-size: 12.5px; text-align: c
     else b.style.display = "none";
   }
 
+  // ---------------------------------------------------------------- follow-along helpers
+  const NTFY_TOPIC = "papertrail2-678499f24ef1";
+  $("topicName").textContent = NTFY_TOPIC;
+  $("openNtfy").href = /Android/i.test(navigator.userAgent) ? `ntfy://ntfy.sh/${NTFY_TOPIC}` : `https://ntfy.sh/${NTFY_TOPIC}`;
+  $("copyTopic").onclick = () => navigator.clipboard?.writeText(NTFY_TOPIC).then(() => toast("Topic copied. Paste it in ntfy."), () => toast("Couldn't copy on this device"));
+  if (store.get("pt-qs-hidden") !== "1") $("quickStart").hidden = false;
+  $("qsHide").onclick = () => { $("quickStart").hidden = true; store.set("pt-qs-hidden", "1"); };
+  let ACCT = parseFloat(store.get("pt-acct")) || null;
+  $("acctIn").value = ACCT ? String(ACCT) : "";
+  $("acctIn").addEventListener("input", () => {
+    const v = parseFloat($("acctIn").value.replace(/[$,]/g, ""));
+    ACCT = v > 0 ? v : null;
+    if (ACCT) store.set("pt-acct", String(ACCT)); else store.del("pt-acct");
+    if (S) { renderDoNow(); renderWatch(); }
+  });
+  // same share of the account as the bot: bot amount / bot account value
+  const yours = (amount) => (ACCT && S) ? amount * ACCT / Math.max(liveEquity(), 1) : null;
+  const yoursLine = (amount) => ACCT && amount ? el("div", { class: "yours", text: `Your amount (for a ${money(ACCT)} account): ${money(yours(amount))}` }) : null;
+
   // ---------------------------------------------------------------- render: do this now
   function headline(t) {
     if (t.action === "BUY") return `Buy ${money(t.amount)} of ${t.kind === "crypto" ? t.name + " (" + ticker(t.symbol) + ")" : t.symbol}`;
@@ -612,12 +782,15 @@ footer { margin-top: 26px; color: var(--ink-3); font-size: 12.5px; text-align: c
       last.action === "BUY" ? el("div", { style: "margin-top:12px" },
         ioBox(last.price, `Amount ${money(last.amount)} · decided ${etTime(last.decided_at)} ET`, last.stop, last.target,
           last.kind === "crypto" ? (last.strategy === "CBRK" ? "trailing" : "12 hr max") : (last.strategy === "LATE" ? "3:55 PM" : "3:50 PM"))) : null,
+      last.action === "BUY" ? yoursLine(last.amount) : null,
       stepsList(last.steps || []),
       last.action === "BUY" && last.out_text ? el("div", { class: "when", style: "margin-top:6px", text: "Exit plan: " + last.out_text }) : null,
       last.action === "BUY" && fresh ? el("div", { class: "skip", text: last.skip_if }) : null,
       !fresh ? el("div", { class: "when", style: "margin-top:10px", text: "This is older than 20 minutes. If you didn't act on it, don't chase it now. Check Holding right now for what's still open." }) : null,
       el("div", { class: "row-btns" },
-        el("button", { class: "btn", onclick: () => copySteps(last) }, "Copy instructions")));
+        el("button", { class: "btn", onclick: () => copySteps(last) }, "Copy instructions")),
+      el("a", { class: "help-link", href: last.action === "BUY" ? "#g-buy" : last.action === "SELL" ? "#g-sell" : "#g-move",
+        onclick: () => { const d = $(last.action === "BUY" ? "g-buy" : last.action === "SELL" ? "g-sell" : "g-move"); if (d) d.open = true; } }, "New to this? How to do it in your app →"));
     box.replaceChildren(tk);
   }
   function copySteps(t) {
@@ -703,6 +876,7 @@ footer { margin-top: 26px; color: var(--ink-3); font-size: 12.5px; text-align: c
             el("div", { class: "ttl" }, "Order plan if it triggers",
               el("button", { onclick: () => navigator.clipboard?.writeText(planText(w)).then(() => toast("Plan copied"), () => toast("Couldn't copy on this device")) }, "Copy")),
             ioBox(w.plan.entry, w.plan.amount >= 1 ? `Amount ${money(w.plan.amount)} · loses ${money(w.plan.risk_dollars)} if the stop hits` : "No cash free for this one right now", w.plan.stop, w.plan.target, timeExitOf(w)),
+            w.plan.amount >= 1 ? yoursLine(w.plan.amount) : null,
             el("div", { class: "how", text: w.plan.entry_text + ". " + w.plan.out_text }),
             w.plan.note ? el("div", { class: "note", text: w.plan.note }) : null) : null);
       }));
@@ -964,6 +1138,14 @@ footer { margin-top: 26px; color: var(--ink-3); font-size: 12.5px; text-align: c
     $("resetGo").disabled = false;
     $("resetDlg").close();
   };
+
+  // links to a guide step open it
+  function openFromHash() {
+    const d = document.getElementById(location.hash.slice(1));
+    if (d && d.tagName === "DETAILS") d.open = true;
+  }
+  window.addEventListener("hashchange", openFromHash);
+  openFromHash();
 
   // ---------------------------------------------------------------- go
   refresh();

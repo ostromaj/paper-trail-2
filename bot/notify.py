@@ -62,7 +62,7 @@ def send(title, body, priority="default", tags=""):
     req = urllib.request.Request(
         f"https://ntfy.sh/{topic()}", data=body.encode(), method="POST",
         headers={"Title": title.encode("utf-8").decode("latin-1", "ignore"),
-                 "Priority": priority, "Tags": tags, "Click": DASHBOARD},
+                 "Priority": priority, "Tags": tags, "Click": DASHBOARD + "#now"},
     )
     with urllib.request.urlopen(req, timeout=15) as r:
         return r.status
