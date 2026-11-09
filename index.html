@@ -573,6 +573,7 @@ footer { margin-top: 26px; color: var(--ink-3); font-size: 12.5px; text-align: c
 
   <footer>
     Paper Trail 2 · built by Claude · <a id="repoLink" href="#">source on GitHub</a>
+    <div id="diag" style="margin-top:6px;font-family:var(--mono);font-size:11px">Page v3</div>
   </footer>
 </div>
 
@@ -606,6 +607,7 @@ footer { margin-top: 26px; color: var(--ink-3); font-size: 12.5px; text-align: c
 (() => {
   "use strict";
   // ---------------------------------------------------------------- config
+  const PAGE_VERSION = "v3";
   const DEFAULT_OWNER = "ostromaj", DEFAULT_REPO = "paper-trail-2";
   let OWNER = DEFAULT_OWNER, REPO = DEFAULT_REPO;
   const host = location.hostname;
@@ -1046,13 +1048,15 @@ footer { margin-top: 26px; color: var(--ink-3); font-size: 12.5px; text-align: c
   //  2. the GitHub API: always fresh, but only ~60 requests/hour per network (school Wi-Fi
   //     shares that with everyone), so it's used only when the raw copy looks stale
   let lastFetchOk = 0, lastApiTry = 0, fetchTrouble = false;
+  const diag = { raw: "not tried", api: "not tried", used: "" };
   const tsOf = (s) => (s && typeof s === "object" && s.last_run) || 0;
   async function fromRaw() {
     try {
       const r = await fetch(RAW_URL + "?t=" + Date.now(), { cache: "no-store" });
+      diag.raw = r.ok ? "ok" : "HTTP " + r.status;
       if (r.ok) return await r.json();
       if (r.status === 404) return "missing";
-    } catch {}
+    } catch (e) { diag.raw = "blocked or offline"; }
     return null;
   }
   async function fromApi() {
@@ -1061,24 +1065,28 @@ footer { margin-top: 26px; color: var(--ink-3); font-size: 12.5px; text-align: c
       const h = { Accept: "application/vnd.github.raw+json" };
       if (etag) h["If-None-Match"] = etag;
       const r = await fetch(API_URL, { headers: h, cache: "no-store" });
+      const left = r.headers.get("X-RateLimit-Remaining");
+      diag.api = (r.ok || r.status === 304 ? "ok" : (r.status === 403 || r.status === 429 ? "hourly limit used up" : "HTTP " + r.status)) + (left != null ? ` (${left} left this hour)` : "");
       if (r.status === 304) return "same";
       if (r.ok) { etag = r.headers.get("ETag"); return await r.json(); }
       if (r.status === 404) return "missing";
-    } catch {}
+    } catch (e) { diag.api = "blocked or offline"; }
     return null;
   }
   async function fetchState() {
     if (DEMO) {
       const r = await fetch("tests/sim_dashboard.json?t=" + Date.now());
+      if (r.ok) { lastFetchOk = Date.now(); diag.used = diag.raw = "demo file"; }
       return r.ok ? r.json() : null;
     }
     let s = await fromRaw();
+    diag.used = s && s !== "missing" ? "raw" : "";
     const marketHours = S && S.market && S.market.open;
     const stale = !s || s === "missing" || (marketHours && Date.now() / 1000 - tsOf(s) > 150);
     if (stale && Date.now() - lastApiTry > 170000) {
       const a = await fromApi();
       if (a === "same") s = s && s !== "missing" ? s : "same";
-      else if (a && (a === "missing" || tsOf(a) >= tsOf(s))) s = a;
+      else if (a && (a === "missing" || tsOf(a) >= tsOf(s))) { s = a; diag.used = "API"; }
     }
     if (s && s !== "missing") { lastFetchOk = Date.now(); fetchTrouble = false; }
     else if (!s) fetchTrouble = true;
@@ -1121,7 +1129,14 @@ footer { margin-top: 26px; color: var(--ink-3); font-size: 12.5px; text-align: c
   // phones often freeze background tabs; catch up the moment the page is shown again
   window.addEventListener("pageshow", () => refresh());
   window.addEventListener("focus", () => { if (S && Date.now() - lastFetchOk > 20000) refresh(); });
-  $("checked").addEventListener("click", () => { lastApiTry = 0; toast("Refreshing…"); refresh(); });
+  $("checked").addEventListener("click", async () => {
+    lastApiTry = 0; toast("Refreshing…");
+    await refresh();
+    const ok = Date.now() - lastFetchOk < 5000;
+    toast(ok ? `Updated ✓ Bot's last check ${etTime(S.last_run)} ET (via ${diag.used || "API"})`
+             : `Couldn't update. Data link: ${diag.raw}. Backup: ${diag.api}.`);
+    $("diag").textContent = `Page ${PAGE_VERSION} · data link: ${diag.raw} · backup: ${diag.api}`;
+  });
 
   // live crypto prices between bot runs (Coinbase public ticker)
   async function pollLive() {
