@@ -322,7 +322,7 @@ footer { margin-top: 26px; color: var(--ink-3); font-size: 12.5px; text-align: c
 
   <div class="statusbar">
     <span class="pill"><i class="dot" id="mktDot"></i><span id="mktLabel">Loading...</span></span>
-    <span class="pill" id="checked">Last check: --</span>
+    <button class="pill" id="checked" title="Tap to refresh now" style="cursor:pointer">Last check: --</button>
     <span class="pill" id="nextCheck">Next check: --</span>
     <span class="pill" id="runPill">Run #1</span>
   </div>
@@ -714,17 +714,19 @@ footer { margin-top: 26px; color: var(--ink-3); font-size: 12.5px; text-align: c
     const m = S.market || {};
     $("mktDot").className = "dot" + (m.open ? " live" : "");
     $("mktLabel").textContent = (m.label || "") + " · crypto 24/7";
-    $("checked").textContent = "Last check: " + (S.last_run ? `${etTime(S.last_run)} ET (${ago(S.last_run)})` : "--");
+    $("checked").textContent = "Last check: " + (S.last_run ? `${etTime(S.last_run)} ET (${ago(S.last_run)}) ↻` : "--");
     // market days: checked every minute; nights and weekends: crypto only, every so often
     const inSession = !!m.open;
     const nxt = S.last_run ? S.last_run + 60 : null;
     const late = inSession && nxt && Date.now() / 1000 - S.last_run > 300;
+    const pageStuck = !DEMO && lastFetchOk && Date.now() - lastFetchOk > 4 * 60000;
     $("nextCheck").textContent = !nxt ? "Next check: --" : late ? "Next check: overdue"
       : inSession ? "Checking every minute" : "Off-hours: crypto checked now and then";
     $("runPill").textContent = `Run #${S.run_number} · since ${etTime(S.run_started, { month: "short", day: "numeric" })}`;
     $("cashLabel").textContent = "Cash: " + money(S.cash);
     const b = $("banner");
     if (DEMO) { b.style.display = "block"; b.textContent = "Demo mode: showing simulated test data, not the live bot."; }
+    else if (pageStuck || (late && fetchTrouble)) { b.style.display = "block"; b.textContent = `This page can't reach GitHub right now (often a busy school or work network), so it's showing data from ${etTime(S.last_run)} ET. The bot itself keeps running. Tap "Last check" to retry.`; }
     else if (late) { b.style.display = "block"; b.textContent = `The bot hasn't checked in since ${etTime(S.last_run)} ET. Treat these numbers as stale until it catches up.`; }
     else b.style.display = "none";
   }
@@ -1039,25 +1041,48 @@ footer { margin-top: 26px; color: var(--ink-3); font-size: 12.5px; text-align: c
   }
 
   // ---------------------------------------------------------------- loading
-  async function fetchState() {
-    if (DEMO) {
-      const r = await fetch("tests/sim_dashboard.json?t=" + Date.now());
-      return r.ok ? r.json() : null;
-    }
+  // Where the data comes from:
+  //  1. raw.githubusercontent.com: no hourly limit, usually fresh within a minute
+  //  2. the GitHub API: always fresh, but only ~60 requests/hour per network (school Wi-Fi
+  //     shares that with everyone), so it's used only when the raw copy looks stale
+  let lastFetchOk = 0, lastApiTry = 0, fetchTrouble = false;
+  const tsOf = (s) => (s && typeof s === "object" && s.last_run) || 0;
+  async function fromRaw() {
+    try {
+      const r = await fetch(RAW_URL + "?t=" + Date.now(), { cache: "no-store" });
+      if (r.ok) return await r.json();
+      if (r.status === 404) return "missing";
+    } catch {}
+    return null;
+  }
+  async function fromApi() {
+    lastApiTry = Date.now();
     try {
       const h = { Accept: "application/vnd.github.raw+json" };
       if (etag) h["If-None-Match"] = etag;
       const r = await fetch(API_URL, { headers: h, cache: "no-store" });
       if (r.status === 304) return "same";
-      if (r.ok) { etag = r.headers.get("ETag"); return r.json(); }
-      if (r.status === 404) return "missing";
-    } catch {}
-    try {
-      const r = await fetch(RAW_URL + "?t=" + Math.floor(Date.now() / 60000), { cache: "no-store" });
-      if (r.ok) return r.json();
+      if (r.ok) { etag = r.headers.get("ETag"); return await r.json(); }
       if (r.status === 404) return "missing";
     } catch {}
     return null;
+  }
+  async function fetchState() {
+    if (DEMO) {
+      const r = await fetch("tests/sim_dashboard.json?t=" + Date.now());
+      return r.ok ? r.json() : null;
+    }
+    let s = await fromRaw();
+    const marketHours = S && S.market && S.market.open;
+    const stale = !s || s === "missing" || (marketHours && Date.now() / 1000 - tsOf(s) > 150);
+    if (stale && Date.now() - lastApiTry > 170000) {
+      const a = await fromApi();
+      if (a === "same") s = s && s !== "missing" ? s : "same";
+      else if (a && (a === "missing" || tsOf(a) >= tsOf(s))) s = a;
+    }
+    if (s && s !== "missing") { lastFetchOk = Date.now(); fetchTrouble = false; }
+    else if (!s) fetchTrouble = true;
+    return s;
   }
 
   let lastSeenTrade = null;
@@ -1093,6 +1118,10 @@ footer { margin-top: 26px; color: var(--ink-3); font-size: 12.5px; text-align: c
     pollLive();
   }
   document.addEventListener("visibilitychange", () => { if (!document.hidden) { document.title = "Paper Trail 2"; refresh(); } });
+  // phones often freeze background tabs; catch up the moment the page is shown again
+  window.addEventListener("pageshow", () => refresh());
+  window.addEventListener("focus", () => { if (S && Date.now() - lastFetchOk > 20000) refresh(); });
+  $("checked").addEventListener("click", () => { lastApiTry = 0; toast("Refreshing…"); refresh(); });
 
   // live crypto prices between bot runs (Coinbase public ticker)
   async function pollLive() {
@@ -1149,7 +1178,7 @@ footer { margin-top: 26px; color: var(--ink-3); font-size: 12.5px; text-align: c
 
   // ---------------------------------------------------------------- go
   refresh();
-  setInterval(refresh, 75000); // GitHub allows ~60 data requests an hour per network
+  setInterval(refresh, 45000); // raw copy has no hourly limit; the API is only a throttled fallback
   setInterval(pollLive, 30000);
   setInterval(() => { if (S) { renderTop(); } }, 30000);
 })();
