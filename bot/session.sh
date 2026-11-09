@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# The all-day loop: checks the markets every 5 minutes from 7:00 AM until just after the
+# The all-day loop: checks the markets every minute from 7:00 AM until just after the
 # close on trading days. GitHub jobs can only run ~6 hours, so before that limit it starts
 # a fresh copy of itself to carry on. This makes the bot independent of GitHub's
 # (unreliable) scheduled timer during market hours.

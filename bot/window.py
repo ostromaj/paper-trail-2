@@ -1,7 +1,7 @@
 """Timing helper for the workflows.
 
 python3 bot/window.py in-session   -> exit 0 if the all-day session loop should be running now
-python3 bot/window.py sleep        -> prints seconds until the next check (every 5 min, at :x1 / :x6)
+python3 bot/window.py sleep        -> prints seconds until the next check (every minute)
 """
 import os
 import sys
@@ -25,10 +25,11 @@ def in_session(ts):
 
 
 def sleep_seconds(ts):
-    sec = int(ts) % 300
-    target = 60  # one minute past each 5-minute mark (9:31, 9:36, ...)
-    wait = (target - sec) % 300
-    return wait if wait >= 20 else wait + 300
+    """Check once a minute, 20 seconds past the minute (gives the data feeds time to post
+    the candle that just closed)."""
+    sec = int(ts) % 60
+    wait = (20 - sec) % 60
+    return wait if wait >= 10 else wait + 60
 
 
 if __name__ == "__main__":

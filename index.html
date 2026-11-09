@@ -421,7 +421,7 @@ footer { margin-top: 26px; color: var(--ink-3); font-size: 12.5px; text-align: c
       <ul class="fine">
         <li><b>This is pretend money.</b> Nothing here is financial advice, and past results don't predict future ones.</li>
         <li><b>Most day traders lose money.</b> In a study of nearly 20,000 Brazilian day traders who kept at it for 300+ days, 97% lost money (Chague, De-Losso &amp; Giovannetti, 2019). An independent replication of the opening-range breakout found its edge mostly disappears after trading costs. That's why this page shows every loss and every fee.</li>
-        <li><b>Timing:</b> the bot checks the markets about every 5 minutes (GitHub sometimes runs it a few minutes late). If you see a trade late and the price has run past the "skip it if" number, skip it.</li>
+        <li><b>Timing:</b> on market days the bot checks every minute from 7:00 AM until just after the close. Nights and weekends it checks crypto less often. If you see a trade late and the price has run past the "skip it if" number, skip it.</li>
         <li><b>Prices:</b> stock prices come from Yahoo Finance and crypto from Coinbase, via free public feeds.</li>
         <li><b>Real accounts:</b> brokers have their own rules for frequent day trading in small accounts. Check yours before trading real money.</li>
       </ul>
@@ -564,14 +564,17 @@ footer { margin-top: 26px; color: var(--ink-3); font-size: 12.5px; text-align: c
     $("mktDot").className = "dot" + (m.open ? " live" : "");
     $("mktLabel").textContent = (m.label || "") + " · crypto 24/7";
     $("checked").textContent = "Last check: " + (S.last_run ? `${etTime(S.last_run)} ET (${ago(S.last_run)})` : "--");
-    const nxt = S.last_run ? S.last_run + 300 : null;
-    const late = nxt && Date.now() / 1000 - nxt > 900;
-    $("nextCheck").textContent = nxt ? (late ? "Next check: overdue, GitHub is slow" : "Next check: ~" + etTime(nxt) + " ET") : "Next check: --";
+    // market days: checked every minute; nights and weekends: crypto only, every so often
+    const inSession = !!m.open;
+    const nxt = S.last_run ? S.last_run + 60 : null;
+    const late = inSession && nxt && Date.now() / 1000 - S.last_run > 300;
+    $("nextCheck").textContent = !nxt ? "Next check: --" : late ? "Next check: overdue"
+      : inSession ? "Checking every minute" : "Off-hours: crypto checked now and then";
     $("runPill").textContent = `Run #${S.run_number} · since ${etTime(S.run_started, { month: "short", day: "numeric" })}`;
     $("cashLabel").textContent = "Cash: " + money(S.cash);
     const b = $("banner");
     if (DEMO) { b.style.display = "block"; b.textContent = "Demo mode: showing simulated test data, not the live bot."; }
-    else if (late) { b.style.display = "block"; b.textContent = `The bot hasn't checked in since ${etTime(S.last_run)} ET. GitHub's scheduler can lag. Treat these numbers as stale until it catches up.`; }
+    else if (late) { b.style.display = "block"; b.textContent = `The bot hasn't checked in since ${etTime(S.last_run)} ET. Treat these numbers as stale until it catches up.`; }
     else b.style.display = "none";
   }
 
@@ -964,7 +967,7 @@ footer { margin-top: 26px; color: var(--ink-3); font-size: 12.5px; text-align: c
 
   // ---------------------------------------------------------------- go
   refresh();
-  setInterval(refresh, 60000);
+  setInterval(refresh, 75000); // GitHub allows ~60 data requests an hour per network
   setInterval(pollLive, 30000);
   setInterval(() => { if (S) { renderTop(); } }, 30000);
 })();

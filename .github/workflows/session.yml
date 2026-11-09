@@ -1,7 +1,7 @@
 name: Market-day session
 
 # Runs continuously on market days (7:00 AM to just after the close, New York time),
-# checking every 5 minutes. Started automatically by the "Trading bot" workflow, and it
+# checking every minute. Started automatically by the "Trading bot" workflow, and it
 # restarts itself before GitHub's 6-hour job limit. Outside that window it exits at once.
 on:
   workflow_dispatch:
@@ -21,7 +21,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - name: Check every 5 minutes until the close
+      - name: Check every minute until the close
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

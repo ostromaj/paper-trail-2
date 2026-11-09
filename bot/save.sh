@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Saves dashboard.json to the "data" branch as a single commit, so the repo doesn't grow
-# by a commit every 5 minutes. The dashboard reads it from there.
+# by a commit every minute. The dashboard reads it from there.
 #
 # EXPECTED_SHA = the data-branch commit this run loaded ("" if there was none). The push only
 # succeeds if nobody else saved in the meantime (compare-and-swap), so two runs can never

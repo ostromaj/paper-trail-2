@@ -6,7 +6,8 @@ A **$100 pretend day-trading portfolio** run by a bot, with plain-English instru
 
 ## What it does
 
-- About every 5 minutes, a GitHub Action checks 11 stocks/ETFs (during market hours) and 3 cryptocurrencies (24/7).
+- On market days a GitHub Action checks 11 stocks/ETFs and 3 cryptocurrencies every minute, from 7:00 AM until just after the close. Nights and weekends it checks crypto now and then.
+- Phone alerts (ntfy app) for every buy, sell, and stop move.
 - Five research-based rules each have a checklist. When every box on a checklist is checked, the bot buys.
 - Every trade is logged with the exact time it was decided, the price, why, and step-by-step instructions anyone can copy.
 - Stocks are always sold the same day (by 3:50 PM ET). Crypto trades have stops, targets, and time limits.

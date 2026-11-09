@@ -1,6 +1,6 @@
 """The paper portfolio and one decision cycle.
 
-`cycle(state, market)` runs once every ~5 minutes on GitHub Actions:
+`cycle(state, market)` runs once a minute on market days (GitHub Actions):
   1. get prices        2. manage open trades (stops, targets, time exits)
   3. check every rule  4. buy anything that meets every condition
   5. save a watchlist of trades that are close to triggering
