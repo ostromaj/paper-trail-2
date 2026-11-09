@@ -9,6 +9,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 concurrency:
   group: paper-trail-bot
@@ -17,20 +18,25 @@ concurrency:
 jobs:
   check-markets:
     runs-on: ubuntu-latest
-    timeout-minutes: 6
+    timeout-minutes: 8
     steps:
       - uses: actions/checkout@v5
 
-      - name: Load the saved portfolio
+      - name: Start the market-day session if it isn't running
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          if git fetch --depth=1 origin data 2>/dev/null; then
-            git show FETCH_HEAD:dashboard.json > dashboard.json || true
+          if python3 bot/window.py in-session; then
+            active=$(gh run list --workflow session.yml --limit 10 --json status \
+                     --jq 'map(select(.status != "completed")) | length' || echo 0)
+            if [ "${active:-0}" = "0" ]; then
+              gh workflow run session.yml --ref "$GITHUB_REF_NAME" && echo "Started the session."
+            else
+              echo "Session already running."
+            fi
           fi
 
       - name: Check the markets and trade
-        run: python3 bot/run.py --state dashboard.json
-
-      - name: Save the portfolio
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: bash bot/save.sh
+        run: bash bot/cycle.sh

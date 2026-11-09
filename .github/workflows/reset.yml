@@ -14,7 +14,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: paper-trail-bot
+  group: paper-trail-reset
   cancel-in-progress: false
 
 jobs:
@@ -25,16 +25,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - name: Load the saved portfolio
-        run: |
-          if git fetch --depth=1 origin data 2>/dev/null; then
-            git show FETCH_HEAD:dashboard.json > dashboard.json || true
-          fi
-
       - name: Archive this run and start over
-        run: python3 bot/run.py --state dashboard.json --reset
-
-      - name: Save the portfolio
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: bash bot/save.sh
+        run: bash bot/cycle.sh --reset
