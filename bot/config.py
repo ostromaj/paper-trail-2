@@ -30,7 +30,7 @@ LATE_MOMENTUM_SYMBOLS = ["SPY"]          # last-half-hour momentum: SPY only
 
 # ---- Money rules -------------------------------------------------------------
 RISK_PER_TRADE = 0.015      # lose at most ~1.5% of the account if a stop is hit
-MAX_POSITION_PCT = 1.00     # one trade may use up to 100% of the account
+MAX_POSITION_PCT = 0.50     # one trade may use up to 50% of the account (room for two at once)
 MAX_OPEN_POSITIONS = 3
 # Keep crypto from taking over: it trades 24/7 and could otherwise tie up the
 # cash the stock rules need at 9:30.
