@@ -1,7 +1,9 @@
 """Timing helper for the workflows.
 
 python3 bot/window.py in-session   -> exit 0 if the all-day session loop should be running now
-python3 bot/window.py sleep        -> prints seconds until the next check (every minute)
+python3 bot/window.py sleep        -> prints seconds until the next check
+                                      (every minute in the market-day window,
+                                       every 5 minutes otherwise, for crypto)
 """
 import os
 import sys
@@ -11,6 +13,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 from clock import close_hm, is_trading_day, ny  # noqa: E402
 
+OFF_HOURS_EVERY = 300     # nights/weekends: crypto check every 5 minutes
 SESSION_START = "07:00"   # warm up early (crypto checks) so nothing is missed at 9:30
 AFTER_CLOSE_MIN = 10      # keep going a few minutes after the bell to close any stock trades
 
@@ -26,7 +29,11 @@ def in_session(ts):
 
 def sleep_seconds(ts):
     """Check once a minute, 20 seconds past the minute (gives the data feeds time to post
-    the candle that just closed)."""
+    the candle that just closed). Outside the market-day window, every 5 minutes, but
+    never sleep past the 7:00 AM start."""
+    if not in_session(ts):
+        nxt = (int(ts) // OFF_HOURS_EVERY + 1) * OFF_HOURS_EVERY + 20
+        return max(10, nxt - int(ts))
     sec = int(ts) % 60
     wait = (20 - sec) % 60
     return wait if wait >= 10 else wait + 60
