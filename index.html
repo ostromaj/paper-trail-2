@@ -96,6 +96,7 @@ header.top { display: flex; align-items: center; justify-content: space-between;
 .icon-btn svg { width: 18px; height: 18px; }
 
 .statusbar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+.pill[hidden] { display: none; }
 .pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; font-size: 12.5px; background: var(--card); border: 1px solid var(--rule-strong); color: var(--ink-2); }
 .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ink-3); }
 .dot.live { background: var(--gain); box-shadow: 0 0 0 0 var(--gain); animation: ping 2s infinite; }
@@ -293,7 +294,8 @@ section, .card[id] { scroll-margin-top: 12px; }
 
 /* scoreboard */
 .delta.small { font-size: 13px; }
-.live-tag { font: 600 10.5px var(--mono); letter-spacing: .08em; color: var(--gain); margin-left: 6px; }
+.live-tag { font: 600 10.5px var(--mono); letter-spacing: .08em; color: var(--gain); margin-left: 6px; text-transform: none; }
+.live-tag.off { color: var(--ink-3); font-weight: 500; letter-spacing: 0; }
 .big.bump { animation: bump .9s ease-out; }
 @keyframes bump { 0% { color: var(--accent); } 100% { color: inherit; } }
 .vs { display: grid; gap: 8px; align-content: end; }
@@ -322,6 +324,11 @@ section, .card[id] { scroll-margin-top: 12px; }
 .stat .nm { font-size: 12px; color: var(--ink-2); font-weight: 600; }
 /* milestones */
 .badges { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
+@media (max-width: 719px) {
+  .badges { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 6px; margin: 0 -16px; padding-left: 16px; padding-right: 16px; scrollbar-width: none; }
+  .badges::-webkit-scrollbar { display: none; }
+  .badge { flex: 0 0 150px; scroll-snap-align: start; }
+}
 .badge { border: 1px dashed var(--rule-strong); border-radius: 10px; padding: 8px 10px; color: var(--ink-3); display: grid; grid-template-columns: 26px 1fr; gap: 0 8px; align-items: center; }
 .badge .ic { grid-row: span 2; font-size: 18px; filter: grayscale(1); opacity: .45; text-align: center; }
 .badge b { font-size: 13px; }
@@ -362,7 +369,7 @@ footer { margin-top: 26px; color: var(--ink-3); font-size: 12.5px; text-align: c
   <header class="top">
     <div class="brand">
       <h1>Paper <span>Trail</span> 2</h1>
-      <p>Claude's $100 pretend day-trading desk</p>
+      <p>Claude's $100 pretend day-trading desk · <span id="runPill">Run #1</span></p>
     </div>
     <div style="display:flex;gap:8px">
     <a class="icon-btn" href="#guide" aria-label="How to follow along" title="How to follow along" style="text-decoration:none;font:700 17px var(--sans);color:var(--ink)">?</a>
@@ -377,8 +384,7 @@ footer { margin-top: 26px; color: var(--ink-3); font-size: 12.5px; text-align: c
   <div class="statusbar">
     <span class="pill"><i class="dot" id="mktDot"></i><span id="mktLabel">Loading...</span></span>
     <button class="pill" id="checked" title="Tap to refresh now" style="cursor:pointer">Last check: --</button>
-    <span class="pill" id="nextCheck">Next check: --</span>
-    <span class="pill" id="runPill">Run #1</span>
+    <span class="pill" id="nextCheck" hidden>Next check: --</span>
   </div>
 
   <!-- SCOREBOARD -->
@@ -430,7 +436,7 @@ footer { margin-top: 26px; color: var(--ink-3); font-size: 12.5px; text-align: c
   <section id="badges-sec">
     <div class="card">
       <h2>Milestones <small id="badgeCount"></small></h2>
-      <p class="sub">Little goals along the way. Earned ones light up.</p>
+      <p class="sub">Little goals along the way. Earned ones light up; the blue one is next.</p>
       <div class="badges" id="badges"></div>
     </div>
   </section>
@@ -801,16 +807,19 @@ footer { margin-top: 26px; color: var(--ink-3); font-size: 12.5px; text-align: c
     renderScore(eq);
     const m = S.market || {};
     $("mktDot").className = "dot" + (m.open ? " live" : "");
-    $("mktLabel").textContent = (m.label || "") + " · crypto 24/7";
-    $("checked").textContent = "Last check: " + (S.last_run ? `${etTime(S.last_run)} ET (${ago(S.last_run)}) ↻` : "--");
+    $("mktLabel").textContent = (m.label || "").replace("Stock market", "Stocks");
+    $("checked").textContent = S.last_run ? `Checked ${ago(S.last_run)} ↻` : "Last check: --";
+    $("checked").title = S.last_run ? `Bot's last check: ${etTime(S.last_run)} ET. Tap to refresh.` : "";
     // market days: checked every minute; nights and weekends: crypto only, every so often
     const inSession = !!m.open;
     const nxt = S.last_run ? S.last_run + 60 : null;
     const late = inSession && nxt && Date.now() / 1000 - S.last_run > 300;
     const pageStuck = !DEMO && lastFetchOk && Date.now() - lastFetchOk > 4 * 60000;
-    $("nextCheck").textContent = !nxt ? "Next check: --" : late ? "Next check: overdue"
-      : inSession ? "Checking every minute" : "Off-hours: crypto checked now and then";
-    $("runPill").textContent = `Run #${S.run_number} · since ${etTime(S.run_started, { month: "short", day: "numeric" })}`;
+    $("nextCheck").hidden = !inSession && !late;
+    $("nextCheck").textContent = late ? "Next check: overdue" : "";
+    $("runPill").textContent = `Run #${S.run_number} · since ${new Date(S.run_started * 1000).toLocaleDateString("en-US", { timeZone: "America/New_York", month: "short", day: "numeric" })}`;
+    $("liveTag").textContent = DEMO ? "DEMO" : (inSession && !late) ? "● LIVE" : S.last_run ? `as of ${etTime(S.last_run)} ET` : "";
+    $("liveTag").className = "live-tag" + ((inSession && !late && !DEMO) ? "" : " off");
     $("cashLabel").textContent = "Cash: " + money(S.cash);
     const b = $("banner");
     if (DEMO) { b.style.display = "block"; b.textContent = "Demo mode: showing simulated test data, not the live bot."; }
@@ -824,7 +833,17 @@ footer { margin-top: 26px; color: var(--ink-3); font-size: 12.5px; text-align: c
   // Everything here also works on older saved data (computed from the trade list when the
   // bot's own stats don't have it yet).
   const sells = () => S.trades.filter((t) => t.action === "SELL");
-  const tradeCost = (t) => t.costs != null ? t.costs : (t.fee || 0);
+  // Older trades didn't store costs, but they did store the decision price and the actual fill,
+  // so the slippage can be rebuilt exactly from the matching buy and sell.
+  function tradeCost(t) {
+    if (t.costs != null) return t.costs;
+    const buy = S.trades.find((b) => b.action === "BUY" && b.position_id === t.position_id) ||
+      (S.past_runs || []).flatMap((r) => r.trades).find((b) => b.action === "BUY" && b.position_id === t.position_id && b.symbol === t.symbol);
+    let c = (t.fee || 0) + (buy ? buy.fee || 0 : 0);
+    if (t.fill_price && t.price) c += t.qty * Math.abs(t.price - t.fill_price);
+    if (buy && buy.fill_price && buy.price) c += buy.qty * Math.abs(buy.fill_price - buy.price);
+    return c;
+  }
   function derived() {
     const st = S.stats || {};
     const ss = sells();
@@ -870,9 +889,9 @@ footer { margin-top: 26px; color: var(--ink-3); font-size: 12.5px; text-align: c
       }),
       D.bhEq == null ? el("div", { class: "cap", text: "The buy-and-hold comparison starts with the next market-day check." }) : null].filter(Boolean));
     // one plain-English sentence
-    const since = etTime(S.run_started, { month: "short", day: "numeric" });
+    const since = new Date(S.run_started * 1000).toLocaleDateString("en-US", { timeZone: "America/New_York", month: "short", day: "numeric" });
     let story = `In ${daysSince(S.run_started)} day${daysSince(S.run_started) > 1 ? "s" : ""} (since ${since}) the bot made ${D.n} round-trip trade${D.n === 1 ? "" : "s"}`;
-    story += D.n ? `, won ${D.wins} and lost ${D.losses}, and is ${ret >= 0 ? "up" : "down"} ${money(Math.abs(eq - S.starting_cash))}` : " and is still at its starting cash";
+    story += D.n ? `, won ${D.wins} and lost ${D.losses}, and is ${ret >= 0 ? "up" : "down"} $${Math.abs(eq - S.starting_cash).toFixed(2)}` : " and is still at its starting cash";
     story += D.costs > 0.005 ? ` after paying ${money(D.costs)} in trading costs.` : ".";
     if (D.bhEq != null) {
       const gap = ret - (D.bhEq / S.starting_cash - 1) * 100;
@@ -888,7 +907,7 @@ footer { margin-top: 26px; color: var(--ink-3); font-size: 12.5px; text-align: c
       ["Biggest dip", D.mdd.toFixed(1) + "%", "worst drop from a high point", D.mdd < -0.05 ? "down" : ""],
       ["Costs paid", money(D.costs), "fees + slightly worse fills", ""],
       ["Won per $1 lost", pfTxt, "above 1 = making money", D.pf == null ? "" : D.pf >= 1 ? "up" : "down"],
-      ["Average trade", D.avg == null ? "--" : money(D.avg, true), "profit per trade after costs", D.avg == null ? "" : cls(D.avg)],
+      ["Average trade", D.avg == null ? "--" : (D.avg >= 0 ? "+$" : "-$") + Math.abs(D.avg).toFixed(Math.abs(D.avg) < 0.1 ? 3 : 2), "profit per trade after costs", D.avg == null ? "" : cls(D.avg)],
       ["Streak", D.streak === 0 ? "--" : `${Math.abs(D.streak)} ${D.streak > 0 ? "win" : "loss"}${Math.abs(D.streak) > 1 ? (D.streak > 0 ? "s" : "es") : ""}`, `best run: ${D.bestStreak} win${D.bestStreak === 1 ? "" : "s"} in a row`, D.streak > 0 ? "up" : D.streak < 0 ? "down" : ""],
     ];
     $("stats").replaceChildren(...items.map(([nm, b, ex, c]) => el("div", { class: "stat" },
@@ -1115,14 +1134,14 @@ footer { margin-top: 26px; color: var(--ink-3); font-size: 12.5px; text-align: c
         res),
       el("div", { class: "body" },
         el("div", { text: t.reason }),
-        t.action === "SELL" && t.entry_price ? el("div", { style: "margin-top:4px", text: `Bought at ${money(t.entry_price)}, held ${t.held_minutes} min, ${t.strategy_name}. Trading costs ${money(tradeCost(t))}${t.costs == null ? " (fees only; older trades didn't record slippage)" : " (fees + slippage, buy and sell)"}.` }) : el("div", { style: "margin-top:4px", text: t.strategy_name }),
+        t.action === "SELL" && t.entry_price ? el("div", { style: "margin-top:4px", text: `Bought at ${money(t.entry_price)}, held ${t.held_minutes} min, ${t.strategy_name}. Trading costs ${money(tradeCost(t))} (fees + slippage, buy and sell).` }) : el("div", { style: "margin-top:4px", text: t.strategy_name }),
         t.checks ? el("ul", { class: "checks", style: "margin-top:6px" }, t.checks.map((c) => el("li", { class: "ok" }, el("span", { class: "mark", text: "✓" }), el("span", null, c.label, " ", el("span", { class: "det", text: c.detail ? `(${c.detail})` : "" }))))) : null,
         ind,
         stepsList(t.steps || []))));
   }
   function shortWhy(t) {
     if (t.action === "BUY") return `${t.strategy_name}: every box checked`;
-    if (t.action === "SELL") return `${t.reason.replace(/ \(around .*\)$/, "")} · held ${t.held_minutes < 120 ? t.held_minutes + " min" : (t.held_minutes / 60).toFixed(1) + " hr"}`;
+    if (t.action === "SELL") return `${(t.pnl > 0 && /^Stop-loss hit/.test(t.reason) ? "Raised stop hit, locked in a gain" : t.reason).replace(/ \(around .*\)$/, "")} · held ${t.held_minutes < 120 ? t.held_minutes + " min" : (t.held_minutes / 60).toFixed(1) + " hr"}`;
     return t.reason[0].toUpperCase() + t.reason.slice(1);
   }
   function renderLog() {
@@ -1205,12 +1224,28 @@ footer { margin-top: 26px; color: var(--ink-3); font-size: 12.5px; text-align: c
       tx.textContent = "$" + v.toFixed(span < 5 ? 2 : 0);
       svg.append(tx);
     }
-    const fmt = (x1 - x0) > 2 * 86400 ? { month: "short", day: "numeric" } : { hour: "numeric", minute: "2-digit" };
-    for (let i = 0; i <= 3; i++) {
-      const t = x0 + (x1 - x0) * i / 3;
-      const tx = sv("text", { x: X(t), y: H - 6, "text-anchor": i === 0 ? "start" : i === 3 ? "end" : "middle", fill: C("--ink-3"), "font-size": 11, "font-family": "IBM Plex Sans, sans-serif" });
-      tx.textContent = new Date(t * 1000).toLocaleString("en-US", Object.assign({ timeZone: "America/New_York" }, fmt));
-      svg.append(tx);
+    if ((x1 - x0) > 1.5 * 86400) {
+      // one faint line per New York midnight, labeled with the day it starts
+      const mids = [];
+      for (let t = Math.ceil(x0 / 3600) * 3600; t <= x1; t += 3600) {
+        if (new Date(t * 1000).toLocaleString("en-US", { timeZone: "America/New_York", hour: "numeric", hour12: false }) % 24 === 0) mids.push(t);
+      }
+      const every = Math.ceil(mids.length / Math.max(2, Math.floor((W - pad.l) / 70)));
+      mids.forEach((t, i) => {
+        svg.append(sv("line", { x1: X(t), x2: X(t), y1: pad.t, y2: H - pad.b, stroke: C("--rule"), "stroke-width": 1, "stroke-dasharray": "1 3" }));
+        if (i % every) return;
+        const tx = sv("text", { x: X(t) + 3, y: H - 6, fill: C("--ink-3"), "font-size": 11, "font-family": "IBM Plex Sans, sans-serif" });
+        const dt = new Date(t * 1000);
+        tx.textContent = dt.toLocaleDateString("en-US", { timeZone: "America/New_York", weekday: "short" }) + " " + dt.toLocaleDateString("en-US", { timeZone: "America/New_York", day: "numeric" });
+        if (X(t) + 46 < W) svg.append(tx);
+      });
+    } else {
+      for (let i = 0; i <= 3; i++) {
+        const t = x0 + (x1 - x0) * i / 3;
+        const tx = sv("text", { x: X(t), y: H - 6, "text-anchor": i === 0 ? "start" : i === 3 ? "end" : "middle", fill: C("--ink-3"), "font-size": 11, "font-family": "IBM Plex Sans, sans-serif" });
+        tx.textContent = new Date(t * 1000).toLocaleString("en-US", { timeZone: "America/New_York", hour: "numeric", minute: "2-digit" });
+        svg.append(tx);
+      }
     }
     // $100 baseline
     const yb = Y(S.starting_cash);
@@ -1542,6 +1577,13 @@ footer { margin-top: 26px; color: var(--ink-3); font-size: 12.5px; text-align: c
   setInterval(refresh, 45000); // raw copy has no hourly limit; the API is only a throttled fallback
   setInterval(pollLive, 30000);
   setInterval(() => { if (S) { renderTop(); } }, 30000);
+  setInterval(() => {
+    const n = $("nextCheck");
+    if (!S || n.hidden || !S.market || !S.market.open || n.textContent.includes("overdue")) return;
+    const sec = Math.floor(Date.now() / 1000);
+    const wait = (80 - (sec % 60)) % 60 || 60;  // bot runs ~20 s past each minute
+    n.textContent = `Next check in 0:${String(wait).padStart(2, "0")}`;
+  }, 1000);
 })();
 </script>
 </body>

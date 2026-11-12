@@ -236,9 +236,12 @@ def manage_positions(state, now, stock_data, crypto_data):
                     if b["t"] >= p["entry_time"] - (p["entry_time"] % secs) + secs
                     and b["t"] + secs <= now and b["t"] + secs > p["checked_through"]]
         closed = False
+        stop_why = ("Raised stop hit, locked in a gain" if p["stop"] > p["entry_price"]
+                    else "Raised stop hit at break-even" if p["stop"] >= p["entry_price"] * 0.999 and p["stop"] > p["initial_stop"]
+                    else "Stop-loss hit")
         for b in new_bars:
             if b["l"] <= p["stop"]:
-                close_position(state, p, min(p["stop"], b["o"]), now, "Stop-loss hit",
+                close_position(state, p, min(p["stop"], b["o"]), now, stop_why,
                                f"around {nice_time(b['t'] + secs)}")
                 closed = True
                 break
@@ -255,7 +258,7 @@ def manage_positions(state, now, stock_data, crypto_data):
 
         # live price checks
         if price <= p["stop"]:
-            close_position(state, p, price, now, "Stop-loss hit")
+            close_position(state, p, price, now, stop_why)
             continue
         if p["target"] and price >= p["target"]:
             close_position(state, p, price, now, "Profit target hit")
