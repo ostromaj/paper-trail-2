@@ -161,7 +161,16 @@ section { margin-top: 16px; }
 .chip.sell { background: var(--loss-soft); color: var(--loss); }
 .chip.move { background: var(--warn-soft); color: var(--warn); }
 .w-head .px { margin-left: auto; font: 500 13px var(--mono); color: var(--ink-2); }
-.meter { display: flex; gap: 4px; margin: 10px 0 8px; }
+.meter { display: flex; gap: 4px; margin: 10px 0 8px; flex: 1; }
+.meter-row { display: flex; align-items: center; gap: 10px; }
+.meter-row .met { font: 500 11.5px var(--mono); color: var(--ink-3); white-space: nowrap; }
+.w.compact { padding: 8px 12px; }
+.w.compact summary { list-style: none; cursor: pointer; }
+.w.compact summary::-webkit-details-marker { display: none; }
+.w.compact .meter { margin: 6px 0 2px; }
+.w.compact .wbody { padding-top: 6px; }
+.w.compact[open] { border-color: var(--rule-strong); }
+.calm { font-size: 13.5px; color: var(--ink-2); }
 .meter i { flex: 1; height: 6px; border-radius: 3px; background: var(--rule); }
 .meter i.on { background: var(--gain); }
 .w.close .meter i.on { background: var(--warn); }
@@ -228,6 +237,8 @@ section { margin-top: 16px; }
 .feed li { display: grid; grid-template-columns: 96px 1fr; gap: 8px; padding: 5px 0; border-top: 1px dashed var(--rule); }
 .feed li:first-child { border-top: 0; }
 .feed .t { font: 500 12px var(--mono); color: var(--ink-3); }
+.feed .f-check { color: var(--ink-3); }
+.feed .f-buy, .feed .f-sell { font-weight: 500; }
 
 /* past runs */
 .run { border: 1px solid var(--rule); border-radius: 11px; margin-top: 10px; }
@@ -496,7 +507,8 @@ footer { margin-top: 26px; color: var(--ink-3); font-size: 12.5px; text-align: c
   <!-- HONEST TEST -->
   <section id="test-sec">
     <div class="card">
-      <h2>Honest test: the same rules on past prices <small id="btWhen"></small></h2>
+      <h2>Honest test: the rules on past prices</h2>
+      <p class="sub" id="btWhen" style="margin:0"></p>
       <p class="sub">A few live trades can't tell skill from luck. So after every market day the exact same bot is replayed over all the saved price history, with and without trading costs, and compared to just buying and holding.</p>
       <div id="bt"></div>
     </div>
@@ -1081,41 +1093,55 @@ footer { margin-top: 26px; color: var(--ink-3); font-size: 12.5px; text-align: c
   const timeExitOf = (w) => w.kind === "crypto" ? (w.strategy === "CBRK" ? "trailing" : "12 hr max") : (w.strategy === "LATE" ? "3:55 PM" : "3:50 PM");
 
   const STATUS_TEXT = { ready: "Buying now", close: "1 condition away", watching: "Watching", holding: "Holding", "off-hours": "Not in its time window" };
+  function watchBody(w) {
+    return [
+      el("ul", { class: "checks" }, w.checks.map((c) => el("li", { class: c.ok ? "ok" : "no" },
+        el("span", { class: "mark", text: c.ok ? "✓" : "✗" }),
+        el("span", null, c.label, " ", el("span", { class: "det", text: c.detail ? `(${c.detail})` : "" }))))),
+      el("div", { class: "trigger", text: w.trigger }),
+      w.plan && w.status !== "holding" ? el("div", { class: "plan-box" },
+        el("div", { class: "ttl" }, "Order plan if it triggers",
+          el("button", { onclick: () => navigator.clipboard?.writeText(planText(w)).then(() => toast("Plan copied"), () => toast("Couldn't copy on this device")) }, "Copy")),
+        ioBox(w.plan.entry, w.plan.amount >= 1 ? `Amount ${money(w.plan.amount)} · loses ${money(w.plan.risk_dollars)} if the stop hits` : "No cash free for this one right now", w.plan.stop, w.plan.target, timeExitOf(w)),
+        w.plan.amount >= 1 ? yoursLine(w.plan.amount) : null,
+        el("div", { class: "how", text: w.plan.entry_text + ". " + w.plan.out_text }),
+        w.plan.note ? el("div", { class: "note", text: w.plan.note }) : null) : null,
+    ];
+  }
+  function watchHead(w) {
+    const px = priceOf(w.symbol) || w.price;
+    return [
+      el("div", { class: "w-head" },
+        el("span", { class: "sym", text: ticker(w.symbol) }),
+        el("span", { class: "strat", text: w.strategy_name }),
+        el("span", { class: "chip " + w.status, text: STATUS_TEXT[w.status] }),
+        el("span", { class: "px", text: money(px) })),
+      el("div", { class: "meter-row" },
+        el("div", { class: "meter", role: "img", "aria-label": `${w.met} of ${w.total} conditions met` },
+          Array.from({ length: w.total }, (_, i) => el("i", { class: i < w.met ? "on" : "" }))),
+        el("span", { class: "met", text: `${w.met} of ${w.total} boxes checked` })),
+    ];
+  }
   function renderWatch() {
     const list = S.watchlist || [];
     const box = $("watch");
-    const shown = watchAll ? list : list.filter((w) => w.status === "ready" || w.status === "close" || w.status === "holding").slice(0, 6);
-    const top = shown.length ? shown : list.slice(0, 4);
-    $("watchCount").textContent = `${list.filter((w) => w.status === "close").length} close · ${list.length} tracked`;
+    const hot = list.filter((w) => w.status === "ready" || w.status === "close" || w.status === "holding");
+    const rest = list.filter((w) => !hot.includes(w));
+    const restShown = watchAll ? rest : rest.slice(0, Math.max(0, 5 - hot.length));
+    const nClose = list.filter((w) => w.status === "close" || w.status === "ready").length;
+    $("watchCount").textContent = `${nClose} close · ${list.length} tracked`;
     if (!list.length) {
       box.replaceChildren(el("div", { class: "empty", text: "No setups to watch right now. Stock rules wake up at 9:35 AM ET on market days; crypto is checked around the clock." }));
     } else {
-      box.replaceChildren(...top.map((w) => {
-        const px = priceOf(w.symbol) || w.price;
-        return el("div", { class: "w " + w.status },
-          el("div", { class: "w-head" },
-            el("span", { class: "sym", text: ticker(w.symbol) }),
-            el("span", { class: "strat", text: w.strategy_name }),
-            el("span", { class: "chip " + w.status, text: STATUS_TEXT[w.status] }),
-            el("span", { class: "px", text: money(px) })),
-          el("div", { class: "meter", role: "img", "aria-label": `${w.met} of ${w.total} conditions met` },
-            Array.from({ length: w.total }, (_, i) => el("i", { class: i < w.met ? "on" : "" }))),
-          el("ul", { class: "checks" }, w.checks.map((c) => el("li", { class: c.ok ? "ok" : "no" },
-            el("span", { class: "mark", text: c.ok ? "✓" : "✗" }),
-            el("span", null, c.label, " ", el("span", { class: "det", text: c.detail ? `(${c.detail})` : "" }))))),
-          el("div", { class: "trigger", text: w.trigger }),
-          w.plan && w.status !== "holding" ? el("div", { class: "plan-box" },
-            el("div", { class: "ttl" }, "Order plan if it triggers",
-              el("button", { onclick: () => navigator.clipboard?.writeText(planText(w)).then(() => toast("Plan copied"), () => toast("Couldn't copy on this device")) }, "Copy")),
-            ioBox(w.plan.entry, w.plan.amount >= 1 ? `Amount ${money(w.plan.amount)} · loses ${money(w.plan.risk_dollars)} if the stop hits` : "No cash free for this one right now", w.plan.stop, w.plan.target, timeExitOf(w)),
-            w.plan.amount >= 1 ? yoursLine(w.plan.amount) : null,
-            el("div", { class: "how", text: w.plan.entry_text + ". " + w.plan.out_text }),
-            w.plan.note ? el("div", { class: "note", text: w.plan.note }) : null) : null);
-      }));
+      box.replaceChildren(
+        ...hot.map((w) => el("div", { class: "w " + w.status }, ...watchHead(w), ...watchBody(w))),
+        !hot.length ? el("div", { class: "calm", text: "Nothing is close to buying. These are the nearest setups (tap one for its checklist and order plan):" }) : null,
+        ...restShown.map((w) => el("details", { class: "w compact " + w.status },
+          el("summary", null, ...watchHead(w)), el("div", { class: "wbody" }, ...watchBody(w)))));
     }
     const mb = $("watchMore");
-    mb.hidden = list.length <= top.length && !watchAll;
-    mb.textContent = watchAll ? "Show only the close ones" : `Show all ${list.length} setups`;
+    mb.hidden = rest.length <= restShown.length && !watchAll;
+    mb.textContent = watchAll ? "Show fewer" : `Show all ${list.length} setups`;
   }
   $("watchMore").onclick = () => { watchAll = !watchAll; renderWatch(); };
 
@@ -1160,9 +1186,19 @@ footer { margin-top: 26px; color: var(--ink-3); font-size: 12.5px; text-align: c
     renderLog();
   });
 
+  function feedText(a) {
+    let t = a.text.replace(" setup(s) one condition away", (m) => m).replace(/(\d+) setup\(s\) one condition away/, (m, n) => `${n} setup${n === "1" ? "" : "s"} one box away`);
+    if (a.count > 1) t = t.replace(/\.$/, "") + ` · ${a.count} checks in a row`;
+    return t;
+  }
   function renderFeed() {
-    $("feed").replaceChildren(...(S.activity || []).slice(0, 14).map((a) =>
-      el("li", null, el("span", { class: "t", text: etTime(a.t, { weekday: "short" }) }), el("span", { text: a.text + (a.count > 1 ? ` (still checking: ${a.count} checks in a row)` : "") }))));
+    $("feed").replaceChildren(...(S.activity || []).slice(0, 14).map((a) => {
+      const kind = /^BUY /.test(a.text) ? "buy" : /^SELL /.test(a.text) ? "sell" : /^Moved /.test(a.text) ? "move" : a.kind === "check" ? "check" : "note";
+      return el("li", { class: "f-" + kind },
+        el("span", { class: "t", text: etTime(a.t, { weekday: "short" }) }),
+        el("span", null, kind === "buy" || kind === "sell" || kind === "move" ? el("span", { class: "chip " + kind, text: kind === "move" ? "stop" : kind }) : null,
+          kind === "buy" || kind === "sell" || kind === "move" ? " " : null, feedText(a).replace(/^(BUY|SELL) /, "")));
+    }));
   }
 
   // ---------------------------------------------------------------- render: past runs
@@ -1389,7 +1425,7 @@ footer { margin-top: 26px; color: var(--ink-3); font-size: 12.5px; text-align: c
         : "Loading test results…" }));
       return;
     }
-    $("btWhen").textContent = "updated " + ago(BT.generated);
+    $("btWhen").textContent = "Last run " + ago(BT.generated);
     const main = BT.scopes[0];
     const [vk, vt] = VERDICT[main.verdict] || ["meh", "Result"];
     const levels = [["none", "No costs (fantasy)"], ["normal", "Normal costs"], ["double", "Double costs"]];
