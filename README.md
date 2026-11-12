@@ -11,7 +11,8 @@ A **$100 pretend day-trading portfolio** run by a bot, with plain-English instru
 - Five research-based rules each have a checklist. When every box on a checklist is checked, the bot buys.
 - Every trade is logged with the exact time it was decided, the price, why, and step-by-step instructions anyone can copy.
 - Stocks are always sold the same day (by 3:50 PM ET). Crypto trades have stops, targets, and time limits.
-- Realistic costs are charged even though the money is pretend.
+- Realistic costs are charged even though the money is pretend (0.05% slippage each way on stocks; 0.40% fee + 0.05% slippage each way on crypto), and the dashboard shows the total.
+- Every result is compared with simply buying SPY and holding it.
 
 ## The rules
 
@@ -25,14 +26,35 @@ A **$100 pretend day-trading portfolio** run by a bot, with plain-English instru
 
 Settings (risk per trade, symbols, times) live in `bot/config.py`.
 
+## Honest test (backtest)
+
+Live results from a handful of trades can't tell skill from luck, so there's a backtest that
+replays saved prices through the **same engine** the live bot uses (same rules, sizing, stops
+and costs), checking only bars that had already finished (no peeking ahead).
+
+- `backtest/archive.py` saves prices from the same free feeds (CNBC 5-minute stock bars,
+  Coinbase 15-minute crypto). The free stock feed only goes back ~5 days, so stock history
+  grows a little every market day; crypto goes back 90 days on the first run.
+- `backtest/backtest.py` replays the archive at **no costs, normal costs and double costs**
+  and compares with just buying and holding (SPY, and Bitcoin for the crypto-only test).
+  It prints a plain-English verdict and writes `backtest.json` for the dashboard.
+- The **Backtest** workflow runs both after every market day (or from the Actions tab) and
+  keeps the archive and results on the `history` branch.
+- Offline check of the harness on made-up prices: `python3 backtest/backtest.py --synthetic`.
+
+## Tests
+
+    python3 tests/test_engine.py    # unit tests (costs, stats, buy-and-hold, backtest harness)
+    python3 tests/sim.py            # full engine on simulated prices; writes the demo data
+
 ## Reset
 
 The **Reset** button on the dashboard (or Actions → *Reset portfolio to $100* → Run workflow → type `RESET`) archives the current run, with its full trade log, into **Past runs**, then starts fresh at $100.
 
 ## How it's built
 
-- `bot/` — plain Python, no packages or API keys. Prices from Yahoo Finance (stocks) and Coinbase (crypto).
+- `bot/` — plain Python, no packages or API keys. Prices from CNBC (stocks, Nasdaq as backup) and Coinbase (crypto).
 - `index.html` — the dashboard (GitHub Pages). It reads `dashboard.json` from the `data` branch.
-- `tests/sim.py` — runs the bot against simulated prices to check the logic. Open `index.html?demo=1` to see the dashboard with that test data.
+- `tests/sim.py` — runs the bot against simulated prices to check the logic. Open `index.html?demo=1` to see the dashboard with that test data (and `tests/sim_backtest.json`, made-up backtest results).
 
 **Pretend money. Not financial advice.** Most real day traders lose money.
