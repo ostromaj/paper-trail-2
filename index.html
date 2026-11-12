@@ -271,7 +271,7 @@ dialog input { width: 100%; font: 14px var(--mono); padding: 9px 10px; border-ra
 .banner { border: 1px solid var(--warn); background: var(--warn-soft); color: var(--warn); border-radius: 10px; padding: 10px 12px; font-size: 13.5px; margin-bottom: 14px; display: none; }
 /* quick start + guide */
 section, .card[id] { scroll-margin-top: 12px; }
-.qs { position: relative; border: 2px solid var(--accent); background: var(--accent-soft); border-radius: 14px; padding: 14px 16px; margin-bottom: 14px; }
+.qs { margin-top: 16px; position: relative; border: 2px solid var(--accent); background: var(--accent-soft); border-radius: 14px; padding: 14px 16px; margin-bottom: 14px; }
 .qs h2 { font-family: var(--display); font-size: 19px; margin: 0 28px 8px 0; }
 .qs ol { margin: 0; padding-left: 20px; display: grid; gap: 6px; font-size: 14.5px; }
 .qs .x { position: absolute; top: 8px; right: 8px; width: 32px; height: 32px; border: 0; background: transparent; cursor: pointer; font-size: 18px; color: var(--ink-2); }
@@ -518,12 +518,13 @@ footer { margin-top: 26px; color: var(--ink-3); font-size: 12.5px; text-align: c
   <section id="log-sec">
     <div class="card">
       <h2>Trade log <small id="logCount"></small></h2>
-      <p class="sub">Every decision with the exact time it was made. Tap one to see the instructions and the indicator readings.</p>
+      <p class="sub">Every finished trade with why it bought and why it sold. Switch to All for each individual instruction with its exact time. Tap any row for details.</p>
       <div class="filter seg" role="group" aria-label="Filter trades" id="logFilter" style="margin:0 0 8px">
-        <button data-f="all" aria-pressed="true">All</button>
+        <button data-f="trips" aria-pressed="true">Round trips</button>
+        <button data-f="all" aria-pressed="false">All</button>
         <button data-f="BUY" aria-pressed="false">Buys</button>
         <button data-f="SELL" aria-pressed="false">Sells</button>
-        <button data-f="MOVE STOP" aria-pressed="false">Stop moves</button>
+        <button data-f="MOVE STOP" aria-pressed="false">Stops</button>
       </div>
       <ul class="log" id="log"></ul>
       <button class="btn more" id="logMore" hidden>Show older trades</button>
@@ -795,7 +796,7 @@ footer { margin-top: 26px; color: var(--ink-3); font-size: 12.5px; text-align: c
   }
 
   // ---------------------------------------------------------------- state + live prices
-  let S = null, etag = null, live = {}, range = "all", logFilter = "all", logLimit = 25, watchAll = false;
+  let S = null, etag = null, live = {}, range = "all", logFilter = "trips", logLimit = 25, watchAll = false;
   const priceOf = (sym) => (live[sym] && live[sym].p) || (S.prices[sym] && S.prices[sym].price);
 
   function liveEquity() {
@@ -815,7 +816,9 @@ footer { margin-top: 26px; color: var(--ink-3); font-size: 12.5px; text-align: c
     const dp = eq - S.day.start_equity;
     const dd = $("dayDelta");
     dd.className = "delta " + cls(dp);
-    dd.textContent = `Today: ${money(dp, true)}` + (S.halted ? "  ·  daily loss limit hit, no new trades today" : "");
+    const todayStr = new Date().toLocaleDateString("en-US", { timeZone: "America/New_York" });
+    const nToday = S.trades.filter((t) => t.action === "BUY" && new Date(t.decided_at * 1000).toLocaleDateString("en-US", { timeZone: "America/New_York" }) === todayStr).length;
+    dd.textContent = `Today: ${money(dp, true)} · ${nToday ? nToday + " buy" + (nToday > 1 ? "s" : "") + " so far" : "no trades yet"}` + (S.halted ? " · daily loss limit hit, done for today" : "");
     renderScore(eq);
     const m = S.market || {};
     $("mktDot").className = "dot" + (m.open ? " live" : "");
@@ -1133,11 +1136,11 @@ footer { margin-top: 26px; color: var(--ink-3); font-size: 12.5px; text-align: c
     if (!list.length) {
       box.replaceChildren(el("div", { class: "empty", text: "No setups to watch right now. Stock rules wake up at 9:35 AM ET on market days; crypto is checked around the clock." }));
     } else {
-      box.replaceChildren(
+      box.replaceChildren(...[
         ...hot.map((w) => el("div", { class: "w " + w.status }, ...watchHead(w), ...watchBody(w))),
         !hot.length ? el("div", { class: "calm", text: "Nothing is close to buying. These are the nearest setups (tap one for its checklist and order plan):" }) : null,
         ...restShown.map((w) => el("details", { class: "w compact " + w.status },
-          el("summary", null, ...watchHead(w)), el("div", { class: "wbody" }, ...watchBody(w)))));
+          el("summary", null, ...watchHead(w)), el("div", { class: "wbody" }, ...watchBody(w))))].filter(Boolean));
     }
     const mb = $("watchMore");
     mb.hidden = rest.length <= restShown.length && !watchAll;
@@ -1170,7 +1173,33 @@ footer { margin-top: 26px; color: var(--ink-3); font-size: 12.5px; text-align: c
     if (t.action === "SELL") return `${(t.pnl > 0 && /^Stop-loss hit/.test(t.reason) ? "Raised stop hit, locked in a gain" : t.reason).replace(/ \(around .*\)$/, "")} · held ${t.held_minutes < 120 ? t.held_minutes + " min" : (t.held_minutes / 60).toFixed(1) + " hr"}`;
     return t.reason[0].toUpperCase() + t.reason.slice(1);
   }
+  // one row per finished trade: what it bought, why, how it ended
+  function tripItem(t) {
+    const buy = S.trades.find((b) => b.action === "BUY" && b.position_id === t.position_id);
+    const held = t.held_minutes < 120 ? t.held_minutes + " min" : (t.held_minutes / 60).toFixed(1) + " hr";
+    return el("li", null, el("details", null,
+      el("summary", null,
+        el("span", { class: "t", text: `${etTime(t.entry_time || t.decided_at, { weekday: "short", month: "short", day: "numeric" })} ET · ${t.strategy_name}` }),
+        el("span", { class: "what" }, el("span", { class: "chip " + (t.pnl > 0 ? "buy" : "sell"), text: t.pnl > 0 ? "WIN" : "LOSS" }), " ",
+          el("b", { text: ticker(t.symbol) }), ` ${money(t.entry_price)} → ${money(t.price)}`,
+          el("span", { class: "why", text: `Out: ${shortWhy(t)}` })),
+        el("span", { class: "res " + cls(t.pnl) }, money(t.pnl, true), el("span", { class: "why", style: "text-align:right", text: pct(t.pnl_pct) }))),
+      el("div", { class: "body" },
+        el("div", null, el("b", { text: "Why it bought: " }), buy ? buy.reason : t.strategy_name),
+        el("div", { style: "margin-top:4px" }, el("b", { text: "Why it sold: " }), t.reason),
+        el("div", { style: "margin-top:4px" }, `Put in ${money(buy ? buy.amount : t.qty * t.entry_price)}, held ${held}, trading costs ${money(tradeCost(t))}.`),
+        buy && buy.indicators ? el("div", { class: "ind" }, Object.entries(buy.indicators).filter(([, v]) => v != null).map(([k2, v]) => el("span", { text: `${k2}: ${v}` }))) : null)));
+  }
   function renderLog() {
+    if (logFilter === "trips") {
+      const trips = S.trades.filter((t) => t.action === "SELL").reverse();
+      $("logCount").textContent = `${trips.length} finished · ${S.positions.length} open`;
+      const box = $("log");
+      if (!trips.length) box.replaceChildren(el("li", { class: "empty", text: "No finished trades yet in this run." }));
+      else box.replaceChildren(...trips.slice(0, logLimit).map(tripItem));
+      $("logMore").hidden = trips.length <= logLimit;
+      return;
+    }
     const all = S.trades.slice().reverse().filter((t) => logFilter === "all" || t.action === logFilter);
     $("logCount").textContent = `${S.trades.length} entries`;
     const box = $("log");
@@ -1242,22 +1271,26 @@ footer { margin-top: 26px; color: var(--ink-3); font-size: 12.5px; text-align: c
     chartPts = pts;
     const css = getComputedStyle(document.documentElement);
     const C = (v) => css.getPropertyValue(v).trim();
-    const pad = { l: 50, r: 10, t: 12, b: 24 };
+    const pad = { l: 58, r: 10, t: 12, b: 24 };
     const x0 = pts[0][0], x1 = pts[pts.length - 1][0];
     const vals = pts.flatMap((p) => p[2] != null ? [p[1], p[2]] : [p[1]]).concat([S.starting_cash]);
     let lo = Math.min(...vals), hi = Math.max(...vals);
     const span = Math.max(hi - lo, 0.5);
     lo -= span * 0.12; hi += span * 0.12;
+    // round-number gridlines ($0.25, $0.50, $1, $2, $5...)
+    const raw = (hi - lo) / 4, mag = Math.pow(10, Math.floor(Math.log10(raw)));
+    const step = [1, 2, 2.5, 5, 10].map((k) => k * mag).find((k) => k >= raw);
+    lo = Math.floor(lo / step) * step; hi = Math.ceil(hi / step) * step;
     const X = (t) => pad.l + (t - x0) / Math.max(x1 - x0, 1) * (W - pad.l - pad.r);
     const Y = (v) => pad.t + (hi - v) / (hi - lo) * (H - pad.t - pad.b);
     chartGeom = { X, Y, pad, W, H };
     const mono = "IBM Plex Mono, ui-monospace, monospace";
     // grid + y labels
-    for (let i = 0; i <= 4; i++) {
-      const v = lo + (hi - lo) * i / 4, y = Y(v);
+    for (let v = lo; v <= hi + step / 2; v += step) {
+      const y = Y(v);
       svg.append(sv("line", { x1: pad.l, x2: W - pad.r, y1: y, y2: y, stroke: C("--rule"), "stroke-width": 1 }));
       const tx = sv("text", { x: pad.l - 6, y: y + 4, "text-anchor": "end", fill: C("--ink-3"), "font-size": 11, "font-family": mono });
-      tx.textContent = "$" + v.toFixed(span < 5 ? 2 : 0);
+      tx.textContent = "$" + v.toFixed(Number.isInteger(step) ? 0 : 2);
       svg.append(tx);
     }
     if ((x1 - x0) > 1.5 * 86400) {
@@ -1346,9 +1379,12 @@ footer { margin-top: 26px; color: var(--ink-3); font-size: 12.5px; text-align: c
     chartGeom.hair.setAttribute("x1", x); chartGeom.hair.setAttribute("x2", x);
     chartGeom.dot.setAttribute("cx", x); chartGeom.dot.setAttribute("cy", y);
     const tip = $("tip");
-    tip.replaceChildren(el("b", { text: "Bot " + money(best[1]) }),
+    const near = S.trades.filter((t) => t.action !== "MOVE STOP" && Math.abs(chartGeom.X(t.decided_at) - x) < 8);
+    tip.replaceChildren(...[el("b", { text: "Bot " + money(best[1]) }),
+      ...near.slice(0, 2).map((t) => el("div", { style: "font:600 12px var(--sans)", class: t.action === "SELL" ? cls(t.pnl) : "",
+        text: t.action === "BUY" ? `Bought ${ticker(t.symbol)} (${t.strategy_name})` : `Sold ${ticker(t.symbol)} ${money(t.pnl, true)}` })),
       best[2] != null ? el("div", { style: "color:var(--ink-2);font:500 12px var(--mono)", text: `Holding ${derived().bhSym}: ${money(best[2])}` }) : null,
-      el("span", { text: new Date(best[0] * 1000).toLocaleString("en-US", { timeZone: "America/New_York", weekday: "short", hour: "numeric", minute: "2-digit" }) + " ET" }));
+      el("span", { text: new Date(best[0] * 1000).toLocaleString("en-US", { timeZone: "America/New_York", weekday: "short", hour: "numeric", minute: "2-digit" }) + " ET" })].filter(Boolean));
     tip.style.display = "block";
     const left = x / chartGeom.W * r.width;
     tip.style.left = Math.min(Math.max(left, 60), r.width - 60) + "px";
