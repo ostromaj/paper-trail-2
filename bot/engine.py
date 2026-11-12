@@ -317,6 +317,22 @@ def _streaks(sells):
     return cur, best_w, best_l
 
 
+def backfill_costs(trades):
+    """Trades saved before costs were recorded still stored the decision price and the actual
+    fill, so their slippage (and any fees) can be rebuilt exactly. Adds "costs" in place."""
+    buys = {t.get("position_id"): t for t in trades if t["action"] == "BUY"}
+    for t in trades:
+        if t["action"] != "SELL" or "costs" in t:
+            continue
+        b = buys.get(t.get("position_id"), {})
+        c = t.get("fee", 0) + b.get("fee", 0)
+        if t.get("fill_price") and t.get("price"):
+            c += t["qty"] * abs(t["price"] - t["fill_price"])
+        if b.get("fill_price") and b.get("price"):
+            c += b["qty"] * abs(b["fill_price"] - b["price"])
+        t["costs"] = round(c, 4)
+
+
 def _group_stats(sells):
     wins = [t for t in sells if t["pnl"] > 0]
     gross_w = sum(t["pnl"] for t in wins)
@@ -345,6 +361,7 @@ def max_drawdown(values):
 
 
 def compute_stats(state):
+    backfill_costs(state["trades"])
     sells = [t for t in state["trades"] if t["action"] == "SELL"]
     wins = [t for t in sells if t["pnl"] > 0]
     losses = [t for t in sells if t["pnl"] <= 0]
@@ -498,7 +515,10 @@ def cycle(state, market):
         if d.get("price"):
             state["prices"][sym] = {"price": d["price"], "t": int(now)}
 
-    update_benchmark(state, market, now, stock_data)
+    try:
+        update_benchmark(state, market, now, stock_data)
+    except Exception as e:  # the yardstick must never stop the bot from trading
+        state["errors"].append(f"buy-and-hold yardstick: {e}")
 
     # 2. new day bookkeeping
     if state["day"]["date"] != today:
