@@ -1,0 +1,51 @@
+name: Backtest
+
+# After each market day: add the latest prices to the archive, replay the archive through the
+# real bot engine, and save the results for the dashboard ("Honest test" card).
+# Everything lives on the "history" branch (bars.json.gz + backtest.json), kept as a single
+# commit so the repo doesn't grow. Paper trading only: no keys, no orders.
+on:
+  schedule:
+    - cron: "37 21 * * 1-5"   # ~4:37 PM New York (5:37 PM in winter)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: paper-trail-backtest
+  cancel-in-progress: false
+
+jobs:
+  backtest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Load the saved archive
+        run: |
+          mkdir -p history
+          if git fetch -q --depth=1 origin history 2>/dev/null; then
+            echo "sha=$(git rev-parse FETCH_HEAD)" >> "$GITHUB_ENV"
+            git show FETCH_HEAD:bars.json.gz > history/bars.json.gz || rm -f history/bars.json.gz
+          fi
+
+      - name: Add the latest prices
+        run: python3 backtest/archive.py --history history/bars.json.gz
+
+      - name: Replay through the bot
+        run: python3 backtest/backtest.py --history history/bars.json.gz --out history/backtest.json
+
+      - name: Save
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd history
+          git init -q -b history
+          git config user.name "paper-trail-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add bars.json.gz backtest.json
+          git commit -q -m "Backtest $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          git push -q --force-with-lease="refs/heads/history:${sha:-}" \
+            "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:refs/heads/history

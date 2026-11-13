@@ -23,6 +23,9 @@ CRYPTO = {
     "SOL-USD": ("Solana", "crypto"),
 }
 
+# The yardstick: what if the $100 had just bought this and held it?
+BENCHMARK = "SPY"
+
 # Which stock strategies look at which symbols
 ORB_SYMBOLS = list(STOCKS)               # opening-range breakout: everything
 VWAP_SYMBOLS = ["SPY", "QQQ"]            # VWAP trend: the two big index ETFs
@@ -40,7 +43,12 @@ MIN_TRADE_DOLLARS = 1.00
 DAILY_LOSS_LIMIT = 0.05     # down 5% on the day -> no new trades until tomorrow
 
 # ---- Realistic costs (paper trades still pay these) ---------------------------
-STOCK_SLIPPAGE = 0.0002     # 0.02% worse fill each way (commission-free broker)
+# Slippage = getting a slightly worse price than the one the bot saw when it decided.
+# A market order placed a minute after a signal on 1-minute data rarely fills at the exact
+# quote, so 0.05% each way is a fair, slightly conservative guess for big liquid names.
+STOCK_SLIPPAGE = 0.0005     # 0.05% worse fill each way
+STOCK_FEE = 0.0             # commission-free broker
+CRYPTO_SLIPPAGE = 0.0005    # 0.05% worse fill each way
 CRYPTO_FEE = 0.004          # 0.40% each way (typical small-account crypto fee/spread)
 
 # ---- Timing (New York time) ------------------------------------------------------

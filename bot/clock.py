@@ -1,5 +1,6 @@
 """New York market-hours helpers."""
 from datetime import datetime, timedelta
+from functools import lru_cache
 from zoneinfo import ZoneInfo
 
 from config import HOLIDAYS, EARLY_CLOSES
@@ -11,10 +12,12 @@ def ny(ts):
     return datetime.fromtimestamp(ts, NY)
 
 
+@lru_cache(maxsize=65536)  # the same bar times get formatted over and over
 def hm(ts):
     return ny(ts).strftime("%H:%M")
 
 
+@lru_cache(maxsize=65536)
 def date_str(ts):
     return ny(ts).strftime("%Y-%m-%d")
 
